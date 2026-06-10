@@ -278,7 +278,7 @@
                 </p>
 
                 <div class="cta-buttons">
-                    <a href="#" class="btn-cta-primary">
+                    <a href="/song-request/request" class="btn-cta-primary">
                         Request Lagu Sekarang
                     </a>
                 </div>
@@ -430,4 +430,3 @@
 <?= $this->section('js') ?>
 <!--<script src="--><?php //= base_url('assets/js/landing.js') ?><!--"></script>-->
 <?= $this->endSection() ?>
-

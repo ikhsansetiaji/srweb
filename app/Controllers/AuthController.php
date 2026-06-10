@@ -188,11 +188,11 @@ class AuthController extends BaseController
     }
 
     /**
-     * Show user dashboard screen (reminds user to request via cafe landing/Android app)
+     * Show user dashboard screen (redirects to UserController)
      */
     public function userDashboard()
     {
-        return view('auth/user_dashboard');
+        return redirect()->to('/user/dashboard');
     }
 
     /**

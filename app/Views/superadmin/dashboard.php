@@ -388,6 +388,9 @@
                     <h1><i class="fas fa-store me-2" style="color:#e53935;font-size:1.2rem"></i>Kelola Cafe</h1>
                     <p>Verifikasi dan kelola semua cafe terdaftar</p>
                 </div>
+                <button class="btn-sa-approve px-3 py-2 fw-bold" onclick="openCreateCafeModal()">
+                    <i class="fas fa-plus-circle me-1"></i> Tambah Kafe Baru
+                </button>
             </div>
 
             <div class="sa-tabs">
@@ -520,6 +523,76 @@
             <button class="btn-sa-approve" onclick="closeRejectModal()">Batal</button>
             <button class="btn-sa-reject" onclick="submitReject()">Tolak</button>
         </div>
+    </div>
+</div>
+
+<!-- Create Cafe Modal -->
+<div class="sa-modal-overlay" id="create-cafe-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9000; display: none; align-items: center; justify-content: center; overflow-y: auto;">
+    <div class="sa-modal" style="background: #fff; border-radius: 16px; padding: 28px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto;">
+        <h5 class="fw-bold mb-1" style="color:#1a1a2e"><i class="fas fa-plus-circle text-danger me-2"></i>Tambah Kafe Baru</h5>
+        <p class="text-muted small mb-4">Input data kafe partner baru dari pengajuan kemitraan email.</p>
+        
+        <form id="createCafeForm">
+            <div class="mb-3">
+                <label for="new_cafe_admin" class="form-label fw-bold small mb-1" style="display:block;text-align:left;color:#374151">Pilih User Admin Kafe</label>
+                <select class="form-select form-select-sm" id="new_cafe_admin" name="admin_id" style="width:100%;padding:6px;border:1px solid #e5e7eb;border-radius:6px;font-size:0.85rem;" required>
+                    <option value="">Memuat admin...</option>
+                </select>
+                <div class="form-text text-muted small" style="font-size:0.75rem;margin-top:4px;">Hanya menampilkan akun Admin yang belum memiliki kafe.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="new_cafe_name" class="form-label fw-bold small mb-1" style="display:block;text-align:left;color:#374151">Nama Kafe</label>
+                <input type="text" class="form-control form-control-sm" id="new_cafe_name" name="nama_kafe" style="width:100%;padding:6px;border:1px solid #e5e7eb;border-radius:6px;font-size:0.85rem;" placeholder="Contoh: Kopi Sederhana" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="new_cafe_address" class="form-label fw-bold small mb-1" style="display:block;text-align:left;color:#374151">Alamat Kafe</label>
+                <textarea class="form-control form-control-sm" id="new_cafe_address" name="alamat" rows="2" style="width:100%;padding:6px;border:1px solid #e5e7eb;border-radius:6px;font-size:0.85rem;resize:vertical;" placeholder="Alamat lengkap kafe..." required></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="new_cafe_desc" class="form-label fw-bold small mb-1" style="display:block;text-align:left;color:#374151">Deskripsi (Opsional)</label>
+                <textarea class="form-control form-control-sm" id="new_cafe_desc" name="deskripsi" rows="2" style="width:100%;padding:6px;border:1px solid #e5e7eb;border-radius:6px;font-size:0.85rem;resize:vertical;" placeholder="Deskripsi singkat kafe..."></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="new_cafe_phone" class="form-label fw-bold small mb-1" style="display:block;text-align:left;color:#374151">Nomor Telepon / WA</label>
+                <input type="text" class="form-control form-control-sm" id="new_cafe_phone" name="phone_number" style="width:100%;padding:6px;border:1px solid #e5e7eb;border-radius:6px;font-size:0.85rem;" placeholder="Contoh: 08123456789">
+            </div>
+
+            <div class="row g-2 mb-3">
+                <div class="col-sm-6">
+                    <label for="new_cafe_receiver" class="form-label fw-bold small mb-1" style="display:block;text-align:left;color:#374151">Penerima Pembayaran</label>
+                    <input type="text" class="form-control form-control-sm" id="new_cafe_receiver" name="payment_receiver" style="width:100%;padding:6px;border:1px solid #e5e7eb;border-radius:6px;font-size:0.85rem;" placeholder="Nama pemilik rekening/qris" required>
+                </div>
+                <div class="col-sm-6">
+                    <label for="new_cafe_method" class="form-label fw-bold small mb-1" style="display:block;text-align:left;color:#374151">Metode Pembayaran</label>
+                    <select class="form-select form-select-sm" id="new_cafe_method" name="payment_method" style="width:100%;padding:6px;border:1px solid #e5e7eb;border-radius:6px;font-size:0.85rem;" required>
+                        <option value="QRIS">QRIS</option>
+                        <option value="bank_transfer">Transfer Bank</option>
+                        <option value="e_wallet">E-Wallet</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-3" id="new_qris_group">
+                <label for="new_cafe_qris" class="form-label fw-bold small mb-1" style="display:block;text-align:left;color:#374151">QRIS Code (Opsional)</label>
+                <input type="text" class="form-control form-control-sm" id="new_cafe_qris" name="payment_qris" style="width:100%;padding:6px;border:1px solid #e5e7eb;border-radius:6px;font-size:0.85rem;" placeholder="URL/Text data QRIS...">
+            </div>
+
+            <div style="margin-bottom: 24px; text-align: left; display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="new_cafe_active" name="is_active_now" style="width:18px;height:18px;" checked>
+                <label class="fw-bold text-success small" for="new_cafe_active" style="cursor:pointer;margin:0;">
+                    <i class="fas fa-power-off me-1"></i> Aktifkan Kafe Sekarang (Langsung Aktif)
+                </label>
+            </div>
+
+            <div class="sa-modal-actions">
+                <button type="button" class="btn-sa-reject" onclick="closeCreateCafeModal()">Batal</button>
+                <button type="submit" class="btn-sa-approve" id="submitCreateCafeBtn">Simpan Kafe</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -1024,5 +1097,71 @@ function toast(msg, isError = false) {
     wrap.appendChild(el);
     setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.4s'; setTimeout(() => el.remove(), 400); }, 3500);
 }
+
+// ===== CREATE CAFE MODAL =====
+function openCreateCafeModal() {
+    document.getElementById('createCafeForm').reset();
+    document.getElementById('create-cafe-modal').style.display = 'flex';
+    loadAvailableAdmins();
+}
+
+function closeCreateCafeModal() {
+    document.getElementById('create-cafe-modal').style.display = 'none';
+}
+
+async function loadAvailableAdmins() {
+    const select = document.getElementById('new_cafe_admin');
+    select.innerHTML = '<option value="">Memuat admin...</option>';
+    try {
+        const res = await fetch(BASE + 'superadmin/available-admins');
+        const json = await res.json();
+        const admins = json.data || [];
+        if (admins.length === 0) {
+            select.innerHTML = '<option value="">(Tidak ada admin kosong)</option>';
+            return;
+        }
+        select.innerHTML = '<option value="">-- Pilih Akun Admin --</option>' + 
+            admins.map(a => `<option value="${a.id}">${esc(a.name)} (${esc(a.email)})</option>`).join('');
+    } catch(e) {
+        select.innerHTML = '<option value="">Gagal memuat admin</option>';
+    }
+}
+
+// Handle form submit
+document.getElementById('createCafeForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submitCreateCafeBtn');
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData);
+    
+    if (!data.is_active_now) {
+        data.is_active_now = '0';
+    }
+
+    try {
+        const res = await postData('superadmin/cafe-create', data);
+        const json = await res.json();
+        if (json.success) {
+            toast(json.message || 'Kafe berhasil dibuat!');
+            closeCreateCafeModal();
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            toast(json.message || 'Gagal menyimpan kafe', true);
+        }
+    } catch(e) {
+        toast('Error: ' + e.message, true);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Simpan Kafe';
+    }
+});
+
+// Close modal on click overlay
+document.getElementById('create-cafe-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeCreateCafeModal();
+});
 </script>
 <?= $this->endSection() ?>
