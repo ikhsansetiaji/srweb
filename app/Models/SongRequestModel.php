@@ -28,16 +28,30 @@ class SongRequestModel extends Model
      * @param array $data
      * @return int|false
      */
+
+    /**
+     * Get song request lengkap dengan info lagu dan cafe
+     */
+    public function getRequestWithDetails(int $requestId): ?array
+    {
+        return $this->select('song_requests.*, songs.title, songs.artist, songs.duration, songs.thumbnail, cafes.nama_kafe, cafes.id as cafe_id')
+            ->join('songs', 'song_requests.song_id = songs.id', 'left')
+            ->join('cafes', 'song_requests.cafe_id = cafes.id', 'left')
+            ->find($requestId);
+    }
+
     public function createRequest(array $data)
     {
         $data['guest_name'] = empty($data['guest_name']) ? 'Anonim' : $data['guest_name'];
-        $data['status'] = 'waiting';
-        $data['requested_at'] = date('Y-m-d H:i:s');
 
-        // Determine queue_type based on nominal threshold
-        if (empty($data['queue_type'])) {
-            $data['queue_type'] = $data['nominal'] >= 50000 ? 'priority' : 'fifo';
+        // Priority harus bayar dulu — status pending_payment sampai Midtrans konfirmasi
+        $queueType = $data['queue_type'] ?? 'fifo';
+        if (empty($queueType)) {
+            $queueType = ($data['nominal'] >= 50000) ? 'priority' : 'fifo';
         }
+        $data['queue_type'] = $queueType;
+        $data['status'] = ($queueType === 'priority') ? 'pending_payment' : 'waiting';
+        $data['requested_at'] = date('Y-m-d H:i:s');
 
         if ($this->insert($data)) {
             return $this->insertID;
@@ -205,4 +219,3 @@ class SongRequestModel extends Model
         return $this->update($requestId, $updateData);
     }
 }
-

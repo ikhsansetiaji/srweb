@@ -34,15 +34,16 @@ class PaymentService
     {
         // Verify request exists dan cafe match
         $request = $this->requestModel->find($requestId);
-        if (!$request || $request['cafe_id'] !== $cafeId) {
+        if (!$request || (int)$request['cafe_id'] !== $cafeId) {
             return ['success' => false, 'message' => 'Request invalid'];
         }
 
         $paymentData['request_id'] = $requestId;
         $paymentData['cafe_id'] = $cafeId;
-        $paymentData['amount'] = $request['nominal'];
+        $paymentData['amount'] = (int) $request['nominal'];
 
         $paymentId = $this->paymentModel->createPayment($paymentData);
+        log_message('info', 'createPayment data: ' . json_encode($paymentData) . ' result: ' . var_export($paymentId, true));
         if ($paymentId) {
             return [
                 'success' => true,
@@ -69,33 +70,28 @@ class PaymentService
         $this->db->transStart();
 
         try {
-            // Find payment by reference
-            $payment = $this->paymentModel->getPaymentByReference($transactionId, $externalReference);
-
-            if ($payment) {
-                // Already processed - idempotency
-                if ($payment['payment_status'] === 'success' && $status === 'success') {
-                    $this->db->transComplete();
-                    return [
-                        'success' => true,
-                        'message' => 'Payment already processed (idempotent)',
-                        'payment_id' => $payment['id']
-                    ];
-                }
+            // Cari payment by external_reference atau transaction_id (status apapun)
+            $payment = null;
+            if ($externalReference) {
+                $payment = $this->paymentModel->where('external_reference', $externalReference)->first();
+            }
+            if (!$payment && $transactionId) {
+                $payment = $this->paymentModel->where('transaction_id', $transactionId)->first();
             }
 
-            // Find payment by referensi
-            $query = $this->paymentModel->where('payment_status', 'pending');
-            if ($transactionId) {
-                $query->where('transaction_id', $transactionId);
-            } else {
-                $query->where('external_reference', $externalReference);
-            }
-
-            $payment = $query->first();
             if (!$payment) {
                 $this->db->transRollback();
                 return ['success' => false, 'message' => 'Payment not found'];
+            }
+
+            // Idempotency — sudah diproses sebelumnya
+            if ($payment['payment_status'] === 'success' && $status === 'success') {
+                $this->db->transComplete();
+                return [
+                    'success'    => true,
+                    'message'    => 'Payment already processed (idempotent)',
+                    'payment_id' => $payment['id']
+                ];
             }
 
             // Update payment status
@@ -104,13 +100,29 @@ class PaymentService
                 return ['success' => false, 'message' => 'Failed to update payment status'];
             }
 
-            // If success, update cafe balance
+            // If success, update cafe balance + aktifkan song request ke antrean
             if ($status === 'success') {
                 if (!$this->balanceModel->addBalance($payment['cafe_id'], $payment['amount'])) {
                     $this->db->transRollback();
                     log_message('error', "Failed to add balance for payment: {$payment['id']}");
                     return ['success' => false, 'message' => 'Failed to update cafe balance'];
                 }
+
+                // Pindahkan song_request dari pending_payment → waiting (masuk antrean)
+                $this->requestModel
+                    ->where('id', $payment['request_id'])
+                    ->where('status', 'pending_payment')
+                    ->set(['status' => 'waiting'])
+                    ->update();
+            }
+
+            // Jika payment gagal/expired, batalkan song_request
+            if (in_array($status, ['failed', 'expired'])) {
+                $this->requestModel
+                    ->where('id', $payment['request_id'])
+                    ->where('status', 'pending_payment')
+                    ->set(['status' => 'cancelled'])
+                    ->update();
             }
 
             $this->db->transComplete();
@@ -149,6 +161,93 @@ class PaymentService
      * @param int $paymentId
      * @return array|null
      */
+
+    /**
+     * Get payment berdasarkan request_id (jika sudah ada)
+     */
+
+    /**
+     * Generate Midtrans Snap Token
+     * Docs: https://docs.midtrans.com/reference/snap-api
+     */
+    public function generateSnapToken(int $paymentId, int $amount, int $requestId): ?string
+    {
+        $serverKey  = env('MIDTRANS_SERVER_KEY', getenv('MIDTRANS_SERVER_KEY'));
+        $isSandbox  = !env('MIDTRANS_IS_PRODUCTION', false);
+        $baseUrl    = $isSandbox
+            ? 'https://app.sandbox.midtrans.com/snap/v1/transactions'
+            : 'https://app.midtrans.com/snap/v1/transactions';
+
+        if (!$serverKey) {
+            log_message('error', 'MIDTRANS_SERVER_KEY tidak diset di .env');
+            return null;
+        }
+
+        // order_id harus unik per transaksi
+        $orderId = 'SR-' . $requestId . '-' . $paymentId . '-' . time();
+
+        // Simpan order_id ke payment record untuk dicocokkan saat webhook
+        $this->paymentModel->update($paymentId, [
+            'external_reference' => $orderId,
+            'payment_status'     => 'pending',
+        ]);
+
+        $payload = [
+            'transaction_details' => [
+                'order_id'     => $orderId,
+                'gross_amount' => $amount,
+            ],
+            'callbacks' => [
+                'finish' => env('app.baseURL') . 'payment/finish',
+            ],
+        ];
+
+        $ch = curl_init($baseUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($payload),
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Accept: application/json',
+                'Authorization: Basic ' . base64_encode($serverKey . ':'),
+            ],
+            // Fix SSL untuk Windows/XAMPP
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_CONNECTTIMEOUT => 10,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+
+        if ($curlError) {
+            log_message('error', "Midtrans curl error: {$curlError}");
+            return null;
+        }
+
+        if ($httpCode !== 201) {
+            log_message('error', "Midtrans Snap HTTP {$httpCode}: {$response}");
+            return null;
+        }
+        log_message('info', "Midtrans Snap OK token acquired");
+
+        $data = json_decode($response, true);
+        return $data['token'] ?? null;
+    }
+
+    public function getPaymentByOrderId(string $orderId): ?array
+    {
+        return $this->paymentModel->where('external_reference', $orderId)->first();
+    }
+
+    public function getPaymentByRequestId(int $requestId): ?array
+    {
+        return $this->paymentModel->where('request_id', $requestId)->first();
+    }
+
     public function getPaymentDetails(int $paymentId): ?array
     {
         return $this->paymentModel->getPaymentWithDetails($paymentId);
@@ -172,4 +271,3 @@ class PaymentService
         return $total;
     }
 }
-

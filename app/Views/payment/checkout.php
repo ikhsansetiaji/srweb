@@ -1,207 +1,152 @@
 <?= $this->extend('layout/app') ?>
 
 <?= $this->section('content') ?>
+<?php
+$req       = $request ?? [];
+$nominal   = (int)($req['nominal']   ?? 0);
+$title     = $req['title']           ?? 'Lagu';
+$artist    = $req['artist']          ?? '-';
+$cafeName  = $req['nama_kafe']       ?? '-';
+$thumbnail = $req['thumbnail']       ?? '/assets/images/default-album.png';
+$requestId = (int)($req['id']        ?? 0);
+$cafeId    = (int)($req['cafe_id']   ?? 0);
+$guestName = $req['guest_name']      ?? 'Anonim';
+$clientKey = env('MIDTRANS_CLIENT_KEY', '');
+$isSandbox = !env('MIDTRANS_IS_PRODUCTION', false);
+?>
 
-<div class="container-lg py-5">
-    <div class="row">
-        <div class="col-lg-8 mx-auto">
-            <h2 class="fw-bold mb-4">
-                <i class="fas fa-credit-card text-danger"></i> Pembayaran
-            </h2>
+<?php if ($clientKey): ?>
+<script src="https://app.<?= $isSandbox ? 'sandbox.' : '' ?>midtrans.com/snap/snap.js"
+        data-client-key="<?= esc($clientKey) ?>"></script>
+<?php endif; ?>
 
-            <div class="row g-4">
-                <!-- Order Summary -->
-                <div class="col-md-7">
-                    <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-body p-4">
-                            <h5 class="fw-bold mb-3">Detail Request</h5>
+<div class="container py-5" style="max-width:480px">
 
-                            <div class="row align-items-center mb-3 pb-3 border-bottom">
-                                <div class="col-3">
-                                    <img src="/assets/images/default-album.png" alt="Album" class="img-fluid rounded">
-                                </div>
-                                <div class="col-9">
-                                    <h6 class="fw-bold mb-1">Lorem Ipsum Dolor</h6>
-                                    <p class="text-muted mb-0">Artist Name</p>
-                                    <small class="text-muted">Cafe Name</small>
-                                </div>
-                            </div>
+    <?php if ($isSandbox && $clientKey): ?>
+    <div class="alert alert-info d-flex gap-2 mb-4" style="font-size:.82rem">
+        <i class="fas fa-flask mt-1"></i>
+        <span>Mode <strong>Sandbox</strong> — gunakan kartu/akun test Midtrans. Tidak ada uang nyata.</span>
+    </div>
+    <?php endif; ?>
 
-                            <div class="mb-3">
-                                <p class="text-muted mb-1">Nama Pengirim:</p>
-                                <p class="fw-bold">Anonim</p>
-                            </div>
-
-                            <div class="mb-3">
-                                <p class="text-muted mb-1">Nominal Saweran:</p>
-                                <p class="fw-bold fs-5">Rp 25.000</p>
-                            </div>
-
-                            <hr>
-
-                            <div class="d-flex justify-content-between fw-bold fs-5">
-                                <span>Total Pembayaran:</span>
-                                <span class="text-danger">Rp 25.000</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Payment Methods -->
-                    <div class="card shadow-sm border-0">
-                        <div class="card-body p-4">
-                            <h5 class="fw-bold mb-3">Pilih Metode Pembayaran</h5>
-
-                            <form id="paymentForm">
-                                <div class="mb-3">
-                                    <div class="form-check payment-method">
-                                        <input class="form-check-input" type="radio" name="payment_method" id="qris" value="QRIS" checked>
-                                        <label class="form-check-label w-100" for="qris">
-                                            <i class="fas fa-qrcode text-danger"></i> QRIS
-                                            <small class="d-block text-muted">Scan QR Code untuk pembayaran instant</small>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <div class="form-check payment-method">
-                                        <input class="form-check-input" type="radio" name="payment_method" id="gopay" value="gopay">
-                                        <label class="form-check-label w-100" for="gopay">
-                                            <i class="fas fa-mobile-alt text-primary"></i> GoPay
-                                            <small class="d-block text-muted">Transfer via GoPay</small>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <div class="form-check payment-method">
-                                        <input class="form-check-input" type="radio" name="payment_method" id="ovo" value="ovo">
-                                        <label class="form-check-label w-100" for="ovo">
-                                            <i class="fas fa-wallet text-info"></i> OVO
-                                            <small class="d-block text-muted">Transfer via OVO</small>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="mb-4">
-                                    <div class="form-check payment-method">
-                                        <input class="form-check-input" type="radio" name="payment_method" id="transfer" value="transfer_bank">
-                                        <label class="form-check-label w-100" for="transfer">
-                                            <i class="fas fa-university text-success"></i> Transfer Bank
-                                            <small class="d-block text-muted">Transfer ke rekening cafe</small>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <!-- Hidden inputs -->
-                                <input type="hidden" name="request_id" value="1">
-                                <input type="hidden" name="cafe_id" value="1">
-
-                                <button type="submit" class="btn btn-danger btn-lg w-100">
-                                    <i class="fas fa-lock"></i> Lanjut ke Pembayaran
-                                </button>
-                            </form>
-                        </div>
-                    </div>
+    <!-- Detail -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <p class="text-muted mb-3" style="font-size:.72rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase">Detail Request</p>
+            <div class="d-flex gap-3 align-items-center mb-3 pb-3 border-bottom">
+                <img src="<?= esc($thumbnail) ?>" alt="cover"
+                     style="width:60px;height:60px;object-fit:cover;border-radius:8px"
+                     onerror="this.src='/assets/images/default-album.png'">
+                <div>
+                    <div class="fw-bold"><?= esc($title) ?></div>
+                    <div class="text-muted small"><?= esc($artist) ?></div>
+                    <div class="text-muted small"><i class="fas fa-store me-1"></i><?= esc($cafeName) ?></div>
                 </div>
-
-                <!-- Info & Security -->
-                <div class="col-md-5">
-                    <div class="card bg-light border-0 mb-4">
-                        <div class="card-body">
-                            <h6 class="fw-bold mb-2 text-danger">
-                                <i class="fas fa-shield-alt"></i> Keamanan Terjamin
-                            </h6>
-                            <p class="text-muted small mb-0">
-                                Pembayaran Anda dienkripsi dan diproses melalui payment gateway terpercaya.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="card bg-light border-0 mb-4">
-                        <div class="card-body">
-                            <h6 class="fw-bold mb-2 text-danger">
-                                <i class="fas fa-info-circle"></i> Cara Kerja
-                            </h6>
-                            <ol class="text-muted small mb-0">
-                                <li>Pilih metode pembayaran</li>
-                                <li>Selesaikan pembayaran</li>
-                                <li>Lagu masuk ke antrian</li>
-                                <li>Tunggu lagu Anda diputar</li>
-                            </ol>
-                        </div>
-                    </div>
-
-                    <div class="card bg-light border-0">
-                        <div class="card-body">
-                            <h6 class="fw-bold mb-2">
-                                <i class="fas fa-redo text-danger"></i> Belum siap?
-                            </h6>
-                            <p class="text-muted small mb-2">Anda bisa membatalkan kapan saja</p>
-                            <a href="/song-request/request" class="btn btn-outline-danger btn-sm w-100">Kembali</a>
-                        </div>
-                    </div>
-                </div>
+            </div>
+            <div class="d-flex justify-content-between mb-1 small">
+                <span class="text-muted">Pengirim</span><span class="fw-semibold"><?= esc($guestName) ?></span>
+            </div>
+            <div class="d-flex justify-content-between mb-1 small">
+                <span class="text-muted">Jenis</span><span class="badge bg-danger">Priority</span>
+            </div>
+            <hr class="my-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold">Total</span>
+                <span class="fw-bold fs-5 text-danger">Rp <?= number_format($nominal, 0, ',', '.') ?></span>
             </div>
         </div>
     </div>
+
+    <!-- Tombol -->
+    <button id="payBtn" class="btn btn-danger btn-lg w-100 mb-3" onclick="startPayment()">
+        <i class="fas fa-lock me-2"></i>
+        <?= $clientKey ? 'Bayar Sekarang' : 'Simulasi Bayar (Demo)' ?>
+    </button>
+
+    <div class="text-center">
+        <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
 </div>
 
-<style>
-.payment-method {
-    padding: 1rem;
-    border: 2px solid #e9ecef;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.payment-method:hover {
-    border-color: #ff4500;
-    background-color: rgba(255, 69, 0, 0.05);
-}
-
-.payment-method input:checked ~ label,
-input[type="radio"]:checked ~ label {
-    color: #ff4500;
-}
-
-.form-check-input:checked {
-    background-color: #ff4500;
-    border-color: #ff4500;
-}
-</style>
-
 <script>
-document.getElementById('paymentForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
+const _REQ_ID  = <?= $requestId ?>;
+const _CAFE_ID = <?= $cafeId ?>;
+const _HAS_KEY = <?= $clientKey ? 'true' : 'false' ?>;
 
-    const formData = new FormData(this);
-    const data = Object.fromEntries(formData);
+async function startPayment() {
+    var btn = document.getElementById('payBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Memproses...';
+
+    if (!_HAS_KEY) {
+        // Mode demo — tidak ada Midtrans
+        await demoPayment(btn);
+        return;
+    }
 
     try {
-        const response = await fetch('/payment/create', {
+        var res  = await fetch('/payment/create', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify(data)
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ request_id: _REQ_ID, cafe_id: _CAFE_ID })
         });
+        var data = await res.json();
 
-        const result = await response.json();
-
-        if (result.success) {
-            // TODO: Redirect to payment gateway (Midtrans/Xendit)
-            // window.location.href = result.payment_url;
-            showAlert('Payment gateway integration pending', 'info');
-        } else {
-            showAlert(result.message, 'danger');
+        if (!data.success || !data.snap_token) {
+            alert(data.message || 'Gagal membuat transaksi. Coba lagi.');
+            resetBtn(btn);
+            return;
         }
-    } catch (error) {
-        showAlert('Payment failed: ' + error.message, 'danger');
+
+        // Buka popup Midtrans Snap
+        window.snap.pay(data.snap_token, {
+            onSuccess: function(r) {
+                window.location.href = '/payment/finish?order_id=' + r.order_id + '&status=success';
+            },
+            onPending: function(r) {
+                window.location.href = '/payment/finish?order_id=' + r.order_id + '&status=pending';
+            },
+            onError: function() {
+                alert('Pembayaran gagal. Silakan coba lagi.');
+                resetBtn(btn);
+            },
+            onClose: function() {
+                resetBtn(btn);
+            }
+        });
+    } catch(e) {
+        alert('Error: ' + e.message);
+        resetBtn(btn);
     }
-});
+}
+
+async function demoPayment(btn) {
+    try {
+        var res  = await fetch('/payment/demo-success', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ request_id: _REQ_ID, cafe_id: _CAFE_ID })
+        });
+        var data = await res.json();
+        if (data.success) {
+            window.location.href = data.redirect || '/';
+        } else {
+            alert(data.message || 'Gagal');
+            resetBtn(btn);
+        }
+    } catch(e) {
+        alert('Error: ' + e.message);
+        resetBtn(btn);
+    }
+}
+
+function resetBtn(btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-' + (_HAS_KEY ? 'lock' : 'play-circle') + ' me-2"></i>' +
+                    (_HAS_KEY ? 'Bayar Sekarang' : 'Simulasi Bayar (Demo)');
+}
 </script>
 
 <?= $this->endSection() ?>
-

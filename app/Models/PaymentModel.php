@@ -18,7 +18,7 @@ class PaymentModel extends Model
     protected $useTimestamps = false;
 
     protected $validationRules = [
-        'request_id' => 'required|integer|is_unique[payments.request_id]',
+        'request_id' => 'required|integer',
         'cafe_id' => 'required|integer',
         'payment_method' => 'required|string|max_length[50]',
         'amount' => 'required|integer|greater_than[0]',
@@ -35,10 +35,19 @@ class PaymentModel extends Model
         $data['payment_status'] = 'pending';
         $data['created_at'] = date('Y-m-d H:i:s');
 
+        // Jika sudah ada payment pending untuk request ini, return ID yang ada
+        $existing = $this->where('request_id', $data['request_id'])
+                         ->where('payment_status', 'pending')
+                         ->first();
+        if ($existing) {
+            return $existing['id'];
+        }
+
         if ($this->insert($data)) {
             return $this->insertID;
         }
 
+        log_message('error', 'PaymentModel::createPayment failed: ' . json_encode($this->errors()));
         return false;
     }
 
@@ -186,4 +195,3 @@ class PaymentModel extends Model
             ->countAllResults();
     }
 }
-
