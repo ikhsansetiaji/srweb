@@ -1,69 +1,138 @@
-# CodeIgniter 4 Application Starter
+<div align="center">
 
-## What is CodeIgniter?
+# 🎵 Sistem Request Lagu
+### Berbasis Web dan Android
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+**Rancang Bangun Sistem Request Lagu Berbasis Web dan Android**  
+**Menggunakan Algoritma Priority Queue dan FIFO di Kafe Small Space**
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+---
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+| | |
+|---|---|
+| **Nama** | Ahmad Ikhsan Setiaji |
+| **NIM** | 5230411082 |
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+---
 
-## Installation & updates
+*Skripsi / Tugas Akhir*
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+</div>
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+---
 
-## Setup
+## 📋 Deskripsi Sistem
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+Sistem Request Lagu Digital adalah aplikasi berbasis Web dan Android yang dikembangkan untuk Kafe Small Space Yogyakarta. Sistem ini menggantikan proses request lagu manual (via operator, WhatsApp, atau kertas) menjadi sistem digital yang transparan dan terkelola.
 
-## Important Change with index.php
+**Permasalahan yang diselesaikan:**
+- Antrean lagu tidak transparan
+- Proses manual sulit dikelola
+- Lagu sering terlewat atau tidak tercatat
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+**Solusi:**
+- Request lagu secara online via Web & Android
+- Pembayaran digital terintegrasi
+- Algoritma **Priority Queue** — lagu dengan nominal lebih tinggi tampil lebih awal
+- Algoritma **FIFO** — antrean normal berdasarkan waktu request
+- Dashboard admin kafe untuk kelola antrean secara real-time
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+---
 
-**Please** read the user guide for a better explanation of how CI4 works!
+## 🛠️ Teknologi
 
-## Repository Management
+| Komponen | Teknologi |
+|---|---|
+| Backend & Web | CodeIgniter 4 (PHP 8.2+) |
+| Database | PostgreSQL |
+| Frontend | Bootstrap 5, Vanilla JS |
+| Mobile | Android |
+| API Musik | Spotify Web API |
+| Pembayaran | Midtrans |
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+---
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+## ⚙️ Instalasi
 
-## Server Requirements
+### Prasyarat
+- PHP 8.2+, ekstensi: `intl`, `mbstring`, `json`, `mysqlnd`, `curl`
+- PostgreSQL
+- Composer
 
-PHP version 8.2 or higher is required, with the following extensions installed:
+### Langkah
 
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
+```bash
+# 1. Clone repository
+git clone <url-repo>
+cd song-request
 
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
+# 2. Install dependensi
+composer install
 
-Additionally, make sure that the following extensions are enabled in your PHP:
+# 3. Konfigurasi environment
+cp env .env
+# Edit .env: isi baseURL, database, Spotify API key, Midtrans key
 
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+# 4. Jalankan migrasi
+php spark migrate
+
+# 5. Jalankan server
+php spark serve
+```
+
+Akses di `http://localhost:8080`
+
+---
+
+## 👤 Peran Pengguna
+
+| Role | Akses |
+|---|---|
+| **User** | Request lagu, lihat antrean, pembayaran |
+| **Admin Kafe** | Kelola antrean, dashboard kafe, withdrawal |
+| **Superadmin** | Verifikasi admin kafe, kelola semua cafe, transaksi |
+
+> Admin kafe baru harus diverifikasi oleh superadmin sebelum bisa login.
+
+---
+
+## 📁 Struktur Direktori
+
+```
+app/
+├── Controllers/     # AuthController, AdminController, SuperadminController, dst.
+├── Models/          # UserModel, CafeModel, SongModel, dst.
+├── Views/           # Tampilan per role (admin/, superadmin/, user/, auth/)
+├── Services/        # AuthService, WithdrawalService, SpotifyService
+├── Libraries/       # TabSessionManager
+├── Filters/         # AuthFilter, AdminFilter, SuperadminFilter
+└── Config/          # Routes, Filters, Database
+public/
+└── assets/          # CSS, JS, gambar
+writable/
+└── logs/            # Log aplikasi
+```
+
+---
+
+## 🔑 Algoritma Antrian
+
+```
+Request masuk
+     │
+     ├─► Priority Queue (nominal > 0)
+     │       Urutan: nominal DESC → waktu ASC
+     │
+     └─► FIFO (nominal = 0 / gratis)
+             Urutan: waktu ASC
+
+Ambil lagu berikutnya:
+  → Cek Priority Queue dulu
+  → Jika kosong, ambil dari FIFO
+```
+
+---
+
+<div align="center">
+<sub>Dikembangkan untuk keperluan Skripsi — Program Studi Teknik Informatika</sub>
+</div>
