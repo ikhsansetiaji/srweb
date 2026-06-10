@@ -63,7 +63,11 @@ $routes->group('song-request', static function ($routes) {
 $routes->group('payment', static function ($routes) {
     $routes->get('checkout', 'PaymentController::paymentPage');
     $routes->post('create', 'PaymentController::createPayment');
+    $routes->get('finish', 'PaymentController::finish');
+    $routes->get('pending', 'PaymentController::pending');
+    $routes->get('error', 'PaymentController::error');
     $routes->post('webhook', 'PaymentController::webhook');
+    $routes->post('demo-success', 'PaymentController::demoSuccess');
     $routes->get('status/(:num)', 'PaymentController::getPaymentStatus/$1');
     $routes->get('history/cafe/(:num)', 'PaymentController::getCafePaymentHistory/$1');
     $routes->get('daily-income/(:num)', 'PaymentController::getDailyIncome/$1');
@@ -124,10 +128,18 @@ $routes->group('api', static function ($routes) {
         $routes->get('spotify/track/(:segment)', 'API\SongController::getTrackDetail/$1');
 
         // Public endpoints - Cafes
-        $routes->get('cafes', 'API\CafeController::listCafes');
+        $routes->get('cafes', 'API\CafeController::index');
         
         // Protected endpoints (require auth token)
         $routes->post('song-request/create', 'API\SongRequestController::create');
         $routes->get('user/requests', 'API\SongRequestController::getUserRequests');
+
+        // Superadmin endpoints (require auth token)
+        $routes->get('superadmin/cafes/pending', 'API\CafeController::getPendingCafes');
+        $routes->post('superadmin/cafes/approve', 'API\CafeController::approveCafe');
+        $routes->post('superadmin/cafes/reject', 'API\CafeController::rejectCafe');
+        $routes->get('superadmin/admins/pending', 'API\SuperadminController::getPendingAdmins');
+        $routes->post('superadmin/admins/approve', 'API\SuperadminController::approveAdmin');
+        $routes->post('superadmin/admins/reject', 'API\SuperadminController::rejectAdmin');
     });
 });
