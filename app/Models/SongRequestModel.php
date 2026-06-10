@@ -167,7 +167,7 @@ class SongRequestModel extends Model
             ->join('songs', 'song_requests.song_id = songs.id', 'left')
             ->join('cafes', 'song_requests.cafe_id = cafes.id', 'left')
             ->where('song_requests.user_id', $userId)
-            ->where('song_requests.status != ', 'cancelled')
+            ->where('song_requests.status !=', 'cancelled')
             ->orderBy('song_requests.requested_at', 'DESC')
             ->limit($limit)
             ->findAll();
