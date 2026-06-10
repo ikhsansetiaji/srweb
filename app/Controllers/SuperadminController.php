@@ -366,4 +366,159 @@ class SuperadminController extends BaseController
             'page' => $page
         ]);
     }
+
+    /**
+     * GET active/pending admins who don't have a cafe
+     */
+    public function getAvailableAdmins()
+    {
+        if (session()->get('user_role') !== 'superadmin') {
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ]);
+        }
+
+        $db = \Config\Database::connect();
+        
+        $admins = $db->table('users')
+            ->select('users.id, users.name, users.email')
+            ->join('cafes', 'users.id = cafes.admin_id', 'left')
+            ->where('users.role', 'admin')
+            ->where('cafes.id', null)
+            ->orderBy('users.name', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        return $this->response->setJSON([
+            'success' => true,
+            'data' => $admins
+        ]);
+    }
+
+    /**
+     * POST create new cafe manually (superadmin only)
+     */
+    public function createCafe()
+    {
+        if (session()->get('user_role') !== 'superadmin') {
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ]);
+        }
+
+        $rules = [
+            'admin_id' => 'required|integer',
+            'nama_kafe' => 'required|string|max_length[100]',
+            'alamat' => 'required|string',
+            'deskripsi' => 'permit_empty|string',
+            'phone_number' => 'permit_empty|string|max_length[20]',
+            'payment_receiver' => 'required|string|max_length[100]',
+            'payment_method' => 'required|in_list[QRIS,bank_transfer,e_wallet]',
+            'payment_qris' => 'permit_empty|string',
+            'is_active_now' => 'permit_empty|in_list[0,1,on]',
+        ];
+
+        if (!$this->validate($rules)) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'success' => false,
+                'errors' => $this->validator->getErrors()
+            ]);
+        }
+
+        $adminId = (int) $this->request->getPost('admin_id');
+        
+        $adminUser = $this->userModel->find($adminId);
+        if (!$adminUser || $adminUser['role'] !== 'admin') {
+            return $this->response->setStatusCode(404)->setJSON([
+                'success' => false,
+                'message' => 'User Admin tidak ditemukan'
+            ]);
+        }
+
+        $existingCafe = $this->cafeModel->where('admin_id', $adminId)->first();
+        if ($existingCafe) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'message' => 'Admin ini sudah memiliki kafe terdaftar'
+            ]);
+        }
+
+        $namaKafe = $this->request->getPost('nama_kafe');
+        
+        $slug = url_title($namaKafe, '-', true);
+        $originalSlug = $slug;
+        $count = 1;
+        while ($this->cafeModel->where('slug', $slug)->first()) {
+            $slug = $originalSlug . '-' . $count;
+            $count++;
+        }
+
+        $isActiveNow = $this->request->getPost('is_active_now');
+        $approved = ($isActiveNow === '1' || $isActiveNow === 'on');
+
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        try {
+            $cafeData = [
+                'admin_id' => $adminId,
+                'nama_kafe' => $namaKafe,
+                'slug' => $slug,
+                'alamat' => $this->request->getPost('alamat'),
+                'deskripsi' => $this->request->getPost('deskripsi'),
+                'phone_number' => $this->request->getPost('phone_number'),
+                'payment_receiver' => $this->request->getPost('payment_receiver'),
+                'payment_method' => $this->request->getPost('payment_method'),
+                'payment_qris' => $this->request->getPost('payment_qris'),
+                'status' => $approved ? 'approved' : 'pending',
+                'is_active' => $approved,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ];
+
+            if ($approved) {
+                $cafeData['verified_by'] = session()->get('user_id');
+                $cafeData['verified_at'] = date('Y-m-d H:i:s');
+            }
+
+            $cafeId = $this->cafeModel->insert($cafeData);
+
+            if ($approved && $cafeId) {
+                $this->balanceModel->insert([
+                    'cafe_id' => $cafeId,
+                    'available_balance' => 0,
+                    'total_income' => 0,
+                    'total_withdrawn' => 0,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+            }
+
+            $db->transComplete();
+
+            if ($db->transStatus()) {
+                if ($approved) {
+                    $this->userModel->update($adminId, [
+                        'is_active' => true,
+                        'is_verified' => true,
+                        'updated_at' => date('Y-m-d H:i:s'),
+                    ]);
+                }
+
+                return $this->response->setJSON([
+                    'success' => true,
+                    'message' => $approved ? 'Kafe berhasil dibuat dan diaktifkan!' : 'Kafe berhasil dibuat dengan status pending.'
+                ]);
+            }
+        } catch (\Exception $e) {
+            $db->transRollback();
+            log_message('error', 'Manual Cafe creation error: ' . $e->getMessage());
+        }
+
+        return $this->response->setStatusCode(400)->setJSON([
+            'success' => false,
+            'message' => 'Gagal membuat kafe'
+        ]);
+    }
 }

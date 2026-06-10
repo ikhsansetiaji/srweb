@@ -190,8 +190,8 @@
             </div>
 
             <div class="d-flex justify-content-center gap-3 flex-wrap">
-                <a href="/cafe/register" class="btn btn-coffee-primary">
-                    <i class="fas fa-redo-alt me-2"></i> Daftar Ulang
+                <a href="mailto:ahmadikhsansetiaji@gmail.com?subject=Tanya%20Status%20Penolakan%20Kafe&body=Halo%20Superadmin,%0d%0a%0d%0aAkun%20saya%20terkait%20kafe%20<?= esc($cafe['nama_kafe']) ?>%20ditolak.%20Mohon%20bantuan%20detailnya.%20Terima%20kasih!" class="btn btn-coffee-primary">
+                    <i class="fas fa-envelope me-2"></i> Hubungi Superadmin
                 </a>
                 <a href="/auth/logout" class="btn btn-coffee-secondary">
                     <i class="fas fa-sign-out-alt me-2"></i> Keluar
@@ -210,11 +210,11 @@
             </div>
             <h2 class="status-title title-no-cafe">Kafe Belum Terdaftar</h2>
             <p class="status-lead">
-                Anda belum mendaftarkan kafe Anda pada platform Song Request. Daftarkan kafe Anda sekarang dan mulai sediakan pemutar lagu interaktif berbasis saweran untuk pelanggan Anda!
+                Akun Admin Kafe Anda telah terdaftar. Saat ini, pembuatan kafe diproses secara manual oleh Superadmin berdasarkan data kemitraan email. Kafe Anda akan otomatis muncul di sini setelah didaftarkan dan diaktifkan oleh Superadmin.
             </p>
             <div class="d-flex justify-content-center gap-3">
-                <a href="/cafe/register" class="btn btn-coffee-primary">
-                    <i class="fas fa-store me-2"></i> Daftarkan Kafe Baru
+                <a href="mailto:ahmadikhsansetiaji@gmail.com?subject=Pertanyaan%20Status%20Pendaftaran%20Kafe" class="btn btn-coffee-primary">
+                    <i class="fas fa-envelope me-2"></i> Hubungi Superadmin
                 </a>
                 <a href="/auth/logout" class="btn btn-coffee-secondary">
                     <i class="fas fa-sign-out-alt me-2"></i> Keluar

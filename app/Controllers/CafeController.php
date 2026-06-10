@@ -21,73 +21,24 @@ class CafeController extends BaseController
     }
 
     /**
-     * Show register cafe form
+     * Show register cafe form (Disabled for self-registration)
      */
     public function registerPage()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/auth/login');
+        if (session()->get('user_role') === 'admin') {
+            return redirect()->to('/admin/dashboard');
         }
-
-        // Only admin can register cafe
-        if (session()->get('user_role') !== 'admin') {
-            return $this->response->setStatusCode(403)->setJSON([
-                'success' => false,
-                'message' => 'Unauthorized'
-            ]);
-        }
-
-        return view('cafe/register');
+        return redirect()->to('/');
     }
 
     /**
-     * Handle cafe registration
+     * Handle cafe registration (Disabled for self-registration)
      */
     public function register()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/auth/login');
-        }
-
-        $rules = [
-            'nama_kafe' => 'required|string|max_length[100]',
-            'alamat' => 'required|string',
-            'phone_number' => 'required|string|max_length[20]',
-            'payment_receiver' => 'required|string|max_length[100]',
-            'payment_method' => 'required|in_list[QRIS,bank_transfer,e_wallet]',
-            'payment_qris' => 'permit_empty|string',
-        ];
-
-        if (!$this->validate($rules)) {
-            return $this->response->setStatusCode(422)->setJSON([
-                'success' => false,
-                'errors' => $this->validator->getErrors()
-            ]);
-        }
-
-        $data = [
-            'nama_kafe' => $this->request->getPost('nama_kafe') ?? $this->request->getJSON('nama_kafe'),
-            'alamat' => $this->request->getPost('alamat') ?? $this->request->getJSON('alamat'),
-            'deskripsi' => $this->request->getPost('deskripsi') ?? $this->request->getJSON('deskripsi'),
-            'phone_number' => $this->request->getPost('phone_number') ?? $this->request->getJSON('phone_number'),
-            'payment_receiver' => $this->request->getPost('payment_receiver') ?? $this->request->getJSON('payment_receiver'),
-            'payment_method' => $this->request->getPost('payment_method') ?? $this->request->getJSON('payment_method'),
-            'payment_qris' => $this->request->getPost('payment_qris') ?? $this->request->getJSON('payment_qris'),
-        ];
-
-        $result = $this->authService->registerCafe(session()->get('user_id'), $data);
-
-        if ($result['success']) {
-            return $this->response->setJSON([
-                'success' => true,
-                'message' => $result['message'],
-                'redirect' => '/admin/dashboard'
-            ]);
-        }
-
-        return $this->response->setStatusCode(400)->setJSON([
+        return $this->response->setStatusCode(403)->setJSON([
             'success' => false,
-            'message' => $result['message']
+            'message' => 'Registrasi mandiri dinonaktifkan. Hubungi Superadmin via email kemitraan.'
         ]);
     }
 

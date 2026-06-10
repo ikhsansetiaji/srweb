@@ -20,7 +20,15 @@ $routes->group('auth', static function ($routes) {
     $routes->get('logout', 'AuthController::logout');
 });
 
-$routes->get('user/dashboard', 'AuthController::userDashboard', ['filter' => 'auth']);
+// ==========================================
+// User Routes (Logged-in user)
+// ==========================================
+$routes->group('user', ['filter' => 'auth'], static function ($routes) {
+    $routes->get('dashboard', 'UserController::dashboard');
+    $routes->get('history', 'UserController::history');
+    $routes->get('profile', 'UserController::profile');
+    $routes->put('profile', 'UserController::updateProfile');
+});
 
 // ==========================================
 // Cafe Routes
@@ -107,6 +115,8 @@ $routes->group('superadmin', static function ($routes) {
     $routes->post('withdrawal-paid', 'SuperadminController::markWithdrawalPaid');
     $routes->get('transactions', 'SuperadminController::getAllTransactions');
     $routes->get('cafes', 'SuperadminController::getAllCafes');
+    $routes->get('available-admins', 'SuperadminController::getAvailableAdmins');
+    $routes->post('cafe-create', 'SuperadminController::createCafe');
     $routes->get('pending-admins', 'SuperadminController::getPendingAdmins');
     $routes->post('admin-approve', 'SuperadminController::approveAdmin');
     $routes->post('admin-reject', 'SuperadminController::rejectAdmin');

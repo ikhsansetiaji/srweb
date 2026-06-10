@@ -123,6 +123,18 @@ function togglePassword(id, btn) {
         icon.className = 'fas fa-eye';
     }
 }
+
+// Auto-select role based on URL parameter
+window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roleParam = urlParams.get('role');
+    if (roleParam) {
+        const roleSelect = document.getElementById('role');
+        if (roleSelect) {
+            roleSelect.value = roleParam;
+        }
+    }
+});
 </script>
 
 <?= $this->endSection() ?>
