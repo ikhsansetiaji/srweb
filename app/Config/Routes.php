@@ -120,6 +120,9 @@ $routes->group('superadmin', static function ($routes) {
     $routes->get('pending-admins', 'SuperadminController::getPendingAdmins');
     $routes->post('admin-approve', 'SuperadminController::approveAdmin');
     $routes->post('admin-reject', 'SuperadminController::rejectAdmin');
+    $routes->post('cafe-toggle-active', 'SuperadminController::toggleCafeActive');
+
+    
 });
 
 // ==========================================
@@ -148,8 +151,12 @@ $routes->group('api', static function ($routes) {
         $routes->get('superadmin/cafes/pending', 'API\CafeController::getPendingCafes');
         $routes->post('superadmin/cafes/approve', 'API\CafeController::approveCafe');
         $routes->post('superadmin/cafes/reject', 'API\CafeController::rejectCafe');
+        $routes->post('superadmin/cafes/create', 'API\CafeController::createCafe');
         $routes->get('superadmin/admins/pending', 'API\SuperadminController::getPendingAdmins');
         $routes->post('superadmin/admins/approve', 'API\SuperadminController::approveAdmin');
         $routes->post('superadmin/admins/reject', 'API\SuperadminController::rejectAdmin');
+
+
+        $routes->get('cafes', 'API\CafeController::listCafes');
     });
 });

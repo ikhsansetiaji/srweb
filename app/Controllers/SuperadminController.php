@@ -37,10 +37,6 @@ class SuperadminController extends BaseController
      */
     public function dashboard()
     {
-        if (session()->get('user_role') !== 'superadmin') {
-            return redirect()->to('/auth/login');
-        }
-
         $totalCafes = $this->cafeModel->countAllResults();
         $activeCafes = $this->cafeModel->where('status', 'approved')->where('is_active', true)->countAllResults();
         $pendingCafes = $this->cafeModel->where('status', 'pending')->countAllResults();
@@ -66,10 +62,6 @@ class SuperadminController extends BaseController
      */
     public function getPendingCafes()
     {
-        if (session()->get('user_role') !== 'superadmin') {
-            return redirect()->to('/auth/login');
-        }
-
         $cafes = $this->cafeModel->getPendingCafes();
 
         return $this->response->setJSON([
@@ -83,10 +75,6 @@ class SuperadminController extends BaseController
      */
     public function approveCafe()
     {
-        if (session()->get('user_role') !== 'superadmin') {
-            return redirect()->to('/auth/login');
-        }
-
         $cafeId = $this->request->getPost('cafe_id');
 
         if (!$cafeId) {
@@ -114,10 +102,6 @@ class SuperadminController extends BaseController
      */
     public function rejectCafe()
     {
-        if (session()->get('user_role') !== 'superadmin') {
-            return redirect()->to('/auth/login');
-        }
-
         $rules = [
             'cafe_id' => 'required|integer',
             'reason' => 'required|string|min_length[10]',
@@ -151,10 +135,6 @@ class SuperadminController extends BaseController
      */
     public function getPendingWithdrawals()
     {
-        if (session()->get('user_role') !== 'superadmin') {
-            return redirect()->to('/auth/login');
-        }
-
         $withdrawals = $this->withdrawalService->getPendingWithdrawals();
 
         return $this->response->setJSON([
@@ -168,10 +148,6 @@ class SuperadminController extends BaseController
      */
     public function approveWithdrawal()
     {
-        if (session()->get('user_role') !== 'superadmin') {
-            return redirect()->to('/auth/login');
-        }
-
         $withdrawalId = $this->request->getPost('withdrawal_id');
 
         if (!$withdrawalId) {
@@ -195,10 +171,6 @@ class SuperadminController extends BaseController
      */
     public function rejectWithdrawal()
     {
-        if (session()->get('user_role') !== 'superadmin') {
-            return redirect()->to('/auth/login');
-        }
-
         $rules = [
             'withdrawal_id' => 'required|integer',
             'reason' => 'required|string|min_length[10]',
@@ -229,10 +201,6 @@ class SuperadminController extends BaseController
      */
     public function markWithdrawalPaid()
     {
-        if (session()->get('user_role') !== 'superadmin') {
-            return redirect()->to('/auth/login');
-        }
-
         $withdrawalId = $this->request->getPost('withdrawal_id');
 
         if (!$withdrawalId) {
@@ -256,10 +224,6 @@ class SuperadminController extends BaseController
      */
     public function getAllTransactions()
     {
-        if (session()->get('user_role') !== 'superadmin') {
-            return redirect()->to('/auth/login');
-        }
-
         $page = $this->request->getGet('page') ?? 1;
         $limit = 50;
         $offset = ($page - 1) * $limit;
@@ -347,10 +311,6 @@ class SuperadminController extends BaseController
 
     public function getAllCafes()
     {
-        if (session()->get('user_role') !== 'superadmin') {
-            return redirect()->to('/auth/login');
-        }
-
         $page = $this->request->getGet('page') ?? 1;
         $limit = 50;
         $offset = ($page - 1) * $limit;
@@ -372,13 +332,6 @@ class SuperadminController extends BaseController
      */
     public function getAvailableAdmins()
     {
-        if (session()->get('user_role') !== 'superadmin') {
-            return $this->response->setStatusCode(403)->setJSON([
-                'success' => false,
-                'message' => 'Unauthorized'
-            ]);
-        }
-
         $db = \Config\Database::connect();
         
         $admins = $db->table('users')
@@ -401,13 +354,6 @@ class SuperadminController extends BaseController
      */
     public function createCafe()
     {
-        if (session()->get('user_role') !== 'superadmin') {
-            return $this->response->setStatusCode(403)->setJSON([
-                'success' => false,
-                'message' => 'Unauthorized'
-            ]);
-        }
-
         $rules = [
             'admin_id' => 'required|integer',
             'nama_kafe' => 'required|string|max_length[100]',
@@ -416,8 +362,12 @@ class SuperadminController extends BaseController
             'phone_number' => 'permit_empty|string|max_length[20]',
             'payment_receiver' => 'required|string|max_length[100]',
             'payment_method' => 'required|in_list[QRIS,bank_transfer,e_wallet]',
-            'payment_qris' => 'permit_empty|string',
-            'is_active_now' => 'permit_empty|in_list[0,1,on]',
+            'payment_qris'       => 'permit_empty|string',
+            'bank_name'          => 'permit_empty|string|max_length[100]',
+            'account_number'     => 'permit_empty|string|max_length[50]',
+            'ewallet_number'     => 'permit_empty|string|max_length[20]',
+            'payment_gate_token' => 'permit_empty|string',
+            'is_active_now'      => 'permit_empty|in_list[0,1,on]',
         ];
 
         if (!$this->validate($rules)) {
@@ -471,7 +421,11 @@ class SuperadminController extends BaseController
                 'phone_number' => $this->request->getPost('phone_number'),
                 'payment_receiver' => $this->request->getPost('payment_receiver'),
                 'payment_method' => $this->request->getPost('payment_method'),
-                'payment_qris' => $this->request->getPost('payment_qris'),
+                'payment_qris'       => $this->request->getPost('payment_qris'),
+                'bank_name'          => $this->request->getPost('bank_name'),
+                'account_number'     => $this->request->getPost('account_number'),
+                'ewallet_number'     => $this->request->getPost('ewallet_number'),
+                'payment_gate_token' => $this->request->getPost('payment_gate_token'),
                 'status' => $approved ? 'approved' : 'pending',
                 'is_active' => $approved,
                 'created_at' => date('Y-m-d H:i:s'),
@@ -519,6 +473,44 @@ class SuperadminController extends BaseController
         return $this->response->setStatusCode(400)->setJSON([
             'success' => false,
             'message' => 'Gagal membuat kafe'
+        ]);
+    }
+
+    public function toggleCafeActive()
+    {
+        $cafeId = (int) $this->request->getPost('cafe_id');
+        $currentActive = (int) $this->request->getPost('current_active');
+
+        $cafe = $this->cafeModel->find($cafeId);
+
+        if (!$cafe) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'success' => false,
+                'message' => 'Kafe tidak ditemukan'
+            ]);
+        }
+
+        $newActive = $currentActive ? false : true;
+
+        $updated = $this->cafeModel->update($cafeId, [
+            'is_active' => $newActive,
+            'updated_at' => date('Y-m-d H:i:s')
+        ]);
+
+        if (!$updated) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Gagal update database',
+                'errors' => $this->cafeModel->errors()
+            ]);
+        }
+
+        $updatedCafe = $this->cafeModel->find($cafeId);
+
+        return $this->response->setJSON([
+            'success' => true,
+            'message' => $newActive ? 'Kafe diaktifkan' : 'Kafe dinonaktifkan',
+            'is_active' => $updatedCafe['is_active']
         ]);
     }
 }
