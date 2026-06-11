@@ -475,4 +475,42 @@ class SuperadminController extends BaseController
             'message' => 'Gagal membuat kafe'
         ]);
     }
+
+    public function toggleCafeActive()
+    {
+        $cafeId = (int) $this->request->getPost('cafe_id');
+        $currentActive = (int) $this->request->getPost('current_active');
+
+        $cafe = $this->cafeModel->find($cafeId);
+
+        if (!$cafe) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'success' => false,
+                'message' => 'Kafe tidak ditemukan'
+            ]);
+        }
+
+        $newActive = $currentActive ? false : true;
+
+        $updated = $this->cafeModel->update($cafeId, [
+            'is_active' => $newActive,
+            'updated_at' => date('Y-m-d H:i:s')
+        ]);
+
+        if (!$updated) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Gagal update database',
+                'errors' => $this->cafeModel->errors()
+            ]);
+        }
+
+        $updatedCafe = $this->cafeModel->find($cafeId);
+
+        return $this->response->setJSON([
+            'success' => true,
+            'message' => $newActive ? 'Kafe diaktifkan' : 'Kafe dinonaktifkan',
+            'is_active' => $updatedCafe['is_active']
+        ]);
+    }
 }

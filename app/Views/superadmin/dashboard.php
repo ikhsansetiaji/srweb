@@ -433,10 +433,11 @@
                                     <th>Status</th>
                                     <th>Aktif</th>
                                     <th>Payment</th>
+                                    <th>Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="all-cafe-tbody">
-                                <tr><td colspan="6" style="text-align:center;padding:28px;color:#9ca3af">Memuat data...</td></tr>
+                                <tr><td colspan="7" style="text-align:center;padding:28px;color:#9ca3af">Memuat data...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -785,27 +786,60 @@ async function loadPendingCafes() {
 
 async function loadAllCafes() {
     const tbody = document.getElementById('all-cafe-tbody');
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:28px;color:#9ca3af">Memuat...</td></tr>';
+
     try {
         const res = await fetch(BASE + 'superadmin/cafes');
         const json = await res.json();
         const cafes = json.data || [];
 
-        if (cafes.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:28px;color:#9ca3af">Belum ada cafe terdaftar</td></tr>';
+        if (!cafes.length) {
+            tbody.innerHTML =
+                '<tr><td colspan="7" style="text-align:center">Belum ada cafe</td></tr>';
             return;
         }
-        tbody.innerHTML = cafes.map((c, i) => `
-            <tr>
-                <td>${i + 1}</td>
-                <td><strong>${esc(c.nama_kafe)}</strong></td>
-                <td>${esc(c.admin_name || '-')}</td>
-                <td><span class="s-badge ${c.status}">${c.status}</span></td>
-                <td>${c.is_active == 1 ? '<span class="s-badge active">Ya</span>' : '<span class="s-badge rejected">Tidak</span>'}</td>
-                <td>${esc(c.payment_method || '-')}</td>
-            </tr>`).join('');
+
+        tbody.innerHTML = cafes.map((c, i) => {
+
+            const isActive = c.is_active === 't';
+
+            return `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td><strong>${esc(c.nama_kafe)}</strong></td>
+                    <td>${esc(c.admin_name || '-')}</td>
+
+                    <td>
+                        <span class="s-badge ${c.status}">
+                            ${c.status}
+                        </span>
+                    </td>
+
+                    <td>
+                        ${isActive
+                            ? '<span class="s-badge active">Aktif</span>'
+                            : '<span class="s-badge rejected">Tidak Aktif</span>'
+                        }
+                    </td>
+
+                    <td>${esc(c.payment_method || '-')}</td>
+
+                    <td>
+                        <button
+                            onclick="toggleCafeActive(${c.id}, ${isActive ? 1 : 0})"
+                            class="btn-sa-${isActive ? 'reject' : 'approve'} px-2 py-1"
+                            style="font-size:0.75rem"
+                        >
+                            ${isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
     } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:28px;color:#e53935">Gagal memuat data</td></tr>';
+        console.error(e);
+        tbody.innerHTML =
+            '<tr><td colspan="7" style="text-align:center">Gagal memuat data</td></tr>';
     }
 }
 
@@ -1181,6 +1215,32 @@ async function loadAvailableAdmins() {
     }
 }
 
+async function toggleCafeActive(cafeId, currentActive) {
+    const label = currentActive ? 'nonaktifkan' : 'aktifkan';
+
+    if (!confirm(`Yakin ingin ${label} kafe ini?`)) {
+        return;
+    }
+
+    try {
+        const res = await postData('superadmin/cafe-toggle-active', {
+            cafe_id: cafeId
+        });
+
+        const json = await res.json();
+
+        if (json.success) {
+            toast(json.message);
+            loadAllCafes();
+        } else {
+            toast(json.message || 'Gagal', true);
+        }
+    } catch (e) {
+        console.error(e);
+        toast('Terjadi kesalahan', true);
+    }
+}
+
 // Handle form submit
 document.getElementById('createCafeForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -1217,5 +1277,7 @@ document.getElementById('createCafeForm').addEventListener('submit', async funct
 document.getElementById('create-cafe-modal').addEventListener('click', function(e) {
     if (e.target === this) closeCreateCafeModal();
 });
+
+
 </script>
 <?= $this->endSection() ?>

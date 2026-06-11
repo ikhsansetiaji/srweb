@@ -120,6 +120,7 @@ $routes->group('superadmin', static function ($routes) {
     $routes->get('pending-admins', 'SuperadminController::getPendingAdmins');
     $routes->post('admin-approve', 'SuperadminController::approveAdmin');
     $routes->post('admin-reject', 'SuperadminController::rejectAdmin');
+    $routes->post('cafe-toggle-active', 'SuperadminController::toggleCafeActive');
 
     
 });
