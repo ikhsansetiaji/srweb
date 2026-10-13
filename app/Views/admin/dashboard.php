@@ -88,10 +88,18 @@
             </h4>
             <small class="text-muted">Dashboard • Kelola antrean dan putar lagu</small>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-3">
             <span class="badge bg-light text-dark border px-3 py-2">
                 <i class="fas fa-hourglass-half text-warning me-1"></i> Antrian: <strong id="statTotalWaiting"><?= esc($queue_stats['waiting_requests'] ?? 0) ?></strong>
             </span>
+
+            <!-- Aggregate toggle -->
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="aggregateSwitch" <?= (!empty($cafe['aggregate_enabled']) ? 'checked' : '') ?> onclick="toggleAggregate(event)">
+                <label class="form-check-label small fw-bold" style="color: rgba(255,255,255,0.7);" for="aggregateSwitch">
+                    <i class="fas fa-layer-group text-info me-1"></i> Aggregate
+                </label>
+            </div>
         </div>
     </div>
 
@@ -227,6 +235,44 @@ let autoPlayEnabled = true;
 let pollingInterval = null;
 let hasPlayedOnce = false;
 let isPlayingNext = false;
+
+// Aggregate toggle handler (admin can enable/disable per-cafe)
+async function toggleAggregateSwitch(checked) {
+    const cb = document.getElementById('aggregateSwitch');
+    if (!cb) return;
+    const enabled = checked ? 1 : 0;
+    cb.disabled = true;
+    try {
+        const form = new FormData();
+        form.append('aggregate_enabled', enabled);
+        form.append('_method', 'PUT');
+
+        const res = await fetch(`/cafe/update/${cafeId}`, {
+            method: 'POST',
+            body: form,
+            credentials: 'same-origin'
+        });
+        const data = await res.json().catch(() => null);
+        if (res.ok && data && data.success) {
+            showAlert(data.message || 'Pengaturan aggregate berhasil disimpan', 'success');
+        } else {
+            showAlert((data && data.message) ? data.message : 'Gagal menyimpan pengaturan aggregate', 'danger');
+            // revert
+            cb.checked = !cb.checked;
+        }
+    } catch (err) {
+        console.error(err);
+        showAlert('Terjadi kesalahan saat menghubungi server', 'danger');
+        cb.checked = !cb.checked;
+    } finally {
+        cb.disabled = false;
+    }
+}
+
+function toggleAggregate(event) {
+    event.preventDefault();
+    toggleAggregateSwitch(event.target.checked);
+}
 
 // Autoplay duration timer
 let durationTimer = null;
