@@ -230,6 +230,13 @@
 
 <script>
 const cafeId = <?= esc($cafe['id']) ?>;
+// Ensure checkbox reflects server value (fix browser preserving form state issue)
+document.addEventListener('DOMContentLoaded', function() {
+    const cb = document.getElementById('aggregateSwitch');
+    if (!cb) return;
+    const serverValue = <?= json_encode((bool) ($cafe['aggregate_enabled'] ?? false)) ?>;
+    cb.checked = serverValue;
+});
 let currentTrack = null;
 let autoPlayEnabled = true;
 let pollingInterval = null;
