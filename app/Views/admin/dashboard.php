@@ -261,11 +261,19 @@ async function toggleAggregateSwitch(checked) {
         });
         const data = await res.json().catch(() => null);
         if (res.ok && data && data.success) {
+            // Ensure checkbox state matches what server actually stored
+            if (typeof data.aggregate_enabled !== 'undefined') {
+                cb.checked = !!data.aggregate_enabled;
+            }
             showAlert(data.message || 'Pengaturan aggregate berhasil disimpan', 'success');
         } else {
             showAlert((data && data.message) ? data.message : 'Gagal menyimpan pengaturan aggregate', 'danger');
-            // revert
-            cb.checked = !cb.checked;
+            // revert to server state if provided
+            if (data && typeof data.aggregate_enabled !== 'undefined') {
+                cb.checked = !!data.aggregate_enabled;
+            } else {
+                cb.checked = !cb.checked;
+            }
         }
     } catch (err) {
         console.error(err);
