@@ -70,9 +70,31 @@ class SongRequestModel extends Model
      * @param int $cafeId
      * @return array|null
      */
+    /**
+     * Jika aggregation diaktifkan per-cafe, pilih lagu berdasarkan total nominal per lagu.
+     * Skema pemilihan:
+     * 1. Pilih song_id dengan SUM(nominal) terbesar (total_nominal)
+     * 2. Jika tie, pilih dengan COUNT(request) lebih banyak
+     * 3. Jika tie, pilih dengan earliest first_requested_at
+     * 4. Hasil: ambil request pertama (earliest requested_at) yang masih waiting untuk song_id tersebut
+     *
+     * Jika aggregation tidak aktif atau tidak ada hasil, fallback ke behavior lama.
+     */
     public function getNextSongToPlay(int $cafeId): ?array
     {
-        // Cari priority queue dulu
+        $cafeModel = new \App\Models\CafeModel();
+        $cafe = $cafeModel->find($cafeId);
+        $aggregateEnabled = !empty($cafe) && !empty($cafe['aggregate_enabled']);
+
+        if ($aggregateEnabled) {
+            $aggRequest = $this->getAggregatedNextSong($cafeId);
+            if ($aggRequest) {
+                return $aggRequest;
+            }
+            // lanjut ke fallback jika tidak ada
+        }
+
+        // Fallback ke behavior lama: priority berdasarkan nominal tunggal
         $prioritySong = $this->select('song_requests.*, songs.title, songs.artist, songs.duration, songs.thumbnail, songs.spotify_url, songs.preview_url, songs.api_song_id')
             ->join('songs', 'song_requests.song_id = songs.id', 'left')
             ->where('song_requests.cafe_id', $cafeId)
@@ -94,6 +116,45 @@ class SongRequestModel extends Model
             ->where('song_requests.status', 'waiting')
             ->orderBy('song_requests.requested_at', 'ASC')
             ->first();
+    }
+
+    /**
+     * Hitung agregasi dan kembalikan request pertama untuk song terpilih
+     *
+     * @param int $cafeId
+     * @return array|null
+     */
+    public function getAggregatedNextSong(int $cafeId): ?array
+    {
+        $db = \Config\Database::connect();
+
+        $agg = $db->table('song_requests sr')
+            ->select('sr.song_id, SUM(sr.nominal) AS total_nominal, COUNT(sr.id) AS request_count, MIN(sr.requested_at) AS first_requested_at')
+            ->where('sr.cafe_id', $cafeId)
+            ->where('sr.nominal >', 0)
+            ->where('sr.status', 'waiting')
+            ->groupBy('sr.song_id')
+            ->orderBy('total_nominal', 'DESC')
+            ->orderBy('request_count', 'DESC')
+            ->orderBy('first_requested_at', 'ASC')
+            ->get()
+            ->getRowArray();
+
+        if (empty($agg) || empty($agg['song_id'])) {
+            return null;
+        }
+
+        // Ambil request pertama (earliest) untuk song tersebut yang masih waiting dan berbayar
+        $request = $this->select('song_requests.*, songs.title, songs.artist, songs.duration, songs.thumbnail, songs.spotify_url, songs.preview_url, songs.api_song_id')
+            ->join('songs', 'song_requests.song_id = songs.id', 'left')
+            ->where('song_requests.cafe_id', $cafeId)
+            ->where('song_requests.song_id', $agg['song_id'])
+            ->where('song_requests.nominal >', 0)
+            ->where('song_requests.status', 'waiting')
+            ->orderBy('song_requests.requested_at', 'ASC')
+            ->first();
+
+        return $request ?: null;
     }
 
     /**
