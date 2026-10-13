@@ -111,7 +111,8 @@ class CafeController extends BaseController
 
         if ($postedAggregate !== null && $postedNama === null && $postedAlamat === null) {
             $data = [
-                'aggregate_enabled' => $postedAggregate ? 1 : 0,
+                // Cast to boolean explicitly so PostgreSQL accepts the value
+                'aggregate_enabled' => (bool) filter_var($postedAggregate, FILTER_VALIDATE_BOOLEAN),
                 'updated_at' => date('Y-m-d H:i:s'),
             ];
 
@@ -146,7 +147,7 @@ class CafeController extends BaseController
             'nama_kafe' => $this->request->getPost('nama_kafe'),
             'alamat' => $this->request->getPost('alamat'),
             'phone_number' => $this->request->getPost('phone_number'),
-            'aggregate_enabled' => $this->request->getPost('aggregate_enabled') ? 1 : 0,
+            'aggregate_enabled' => (bool) filter_var($this->request->getPost('aggregate_enabled'), FILTER_VALIDATE_BOOLEAN),
             'updated_at' => date('Y-m-d H:i:s'),
         ];
 
