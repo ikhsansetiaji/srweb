@@ -110,17 +110,27 @@ class CafeController extends BaseController
         $postedAlamat = $this->request->getPost('alamat');
 
         if ($postedAggregate !== null && $postedNama === null && $postedAlamat === null) {
-            $data = [
-                // Cast to boolean explicitly so PostgreSQL accepts the value
-                'aggregate_enabled' => (bool) filter_var($postedAggregate, FILTER_VALIDATE_BOOLEAN),
-                'updated_at' => date('Y-m-d H:i:s'),
-            ];
+            // Use explicit DB update to ensure boolean literal is written correctly for Postgres
+            $db = \Config\Database::connect();
+            $enabledBool = (bool) filter_var($postedAggregate, FILTER_VALIDATE_BOOLEAN);
 
-            if ($this->cafeModel->update($cafeId, $data)) {
-                return $this->response->setJSON([
-                    'success' => true,
-                    'message' => 'Pengaturan aggregate berhasil diperbarui'
-                ]);
+            $builder = $db->table('cafes');
+            $builder->where('id', $cafeId);
+            // set boolean literal (unescaped) so Postgres receives TRUE/FALSE
+            $builder->set('aggregate_enabled', $enabledBool ? 'TRUE' : 'FALSE', false);
+            $builder->set('updated_at', date('Y-m-d H:i:s'));
+
+            try {
+                $updated = $builder->update();
+                if ($updated) {
+                    return $this->response->setJSON([
+                        'success' => true,
+                        'message' => 'Pengaturan aggregate berhasil diperbarui',
+                        'aggregate_enabled' => $enabledBool
+                    ]);
+                }
+            } catch (\Exception $e) {
+                log_message('error', 'Cafe aggregate update error: ' . $e->getMessage());
             }
 
             return $this->response->setStatusCode(400)->setJSON([
