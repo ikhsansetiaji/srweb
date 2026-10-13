@@ -104,10 +104,35 @@ class CafeController extends BaseController
             ]);
         }
 
+        // Quick-toggle: if only aggregate_enabled is provided (AJAX toggle), skip full validation
+        $postedAggregate = $this->request->getPost('aggregate_enabled');
+        $postedNama = $this->request->getPost('nama_kafe');
+        $postedAlamat = $this->request->getPost('alamat');
+
+        if ($postedAggregate !== null && $postedNama === null && $postedAlamat === null) {
+            $data = [
+                'aggregate_enabled' => $postedAggregate ? 1 : 0,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ];
+
+            if ($this->cafeModel->update($cafeId, $data)) {
+                return $this->response->setJSON([
+                    'success' => true,
+                    'message' => 'Pengaturan aggregate berhasil diperbarui'
+                ]);
+            }
+
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'message' => 'Gagal menyimpan pengaturan aggregate'
+            ]);
+        }
+
         $rules = [
             'nama_kafe' => 'required|string|max_length[100]',
             'alamat' => 'required|string',
             'phone_number' => 'permit_empty|string|max_length[20]',
+            'aggregate_enabled' => 'permit_empty',
         ];
 
         if (!$this->validate($rules)) {
@@ -121,6 +146,7 @@ class CafeController extends BaseController
             'nama_kafe' => $this->request->getPost('nama_kafe'),
             'alamat' => $this->request->getPost('alamat'),
             'phone_number' => $this->request->getPost('phone_number'),
+            'aggregate_enabled' => $this->request->getPost('aggregate_enabled') ? 1 : 0,
             'updated_at' => date('Y-m-d H:i:s'),
         ];
 
