@@ -194,6 +194,22 @@
         </div>
     </div>
 
+    <!-- Pending Payments (separate section) -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card queue-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong class="text-secondary"><i class="fas fa-credit-card me-1"></i> Pending Payments</strong>
+                    <span id="pendingPaymentBadge" class="badge bg-secondary rounded-pill">0</span>
+                </div>
+                <div class="card-body p-3" id="pendingPaymentList" style="max-height: 220px; overflow-y: auto;">
+                    <div class="text-center py-3 text-muted small">Tidak ada request yang menunggu pembayaran</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
     <!-- ==================== -->
     <!-- STATS (secondary)    -->
     <!-- ==================== -->
@@ -520,6 +536,7 @@ function updateTrackDetail() {
 function renderQueueLists(queue) {
     const pList = document.getElementById('priorityQueueList');
     const fList = document.getElementById('fifoQueueList');
+    const pendingList = document.getElementById('pendingPaymentList');
 
     const pItems = queue.priority || [];
     document.getElementById('priorityQueueBadge').textContent = pItems.length;
@@ -532,10 +549,19 @@ function renderQueueLists(queue) {
     fList.innerHTML = fItems.length === 0
         ? '<div class="text-center py-4 text-muted small">Antrean kosong</div>'
         : fItems.map((item, i) => queueItemHTML(item, i, 'fifo')).join('');
+
+    const pendingItems = queue.pending_payments || [];
+    document.getElementById('pendingPaymentBadge').textContent = pendingItems.length;
+    pendingList.innerHTML = pendingItems.length === 0
+        ? '<div class="text-center py-3 text-muted small">Tidak ada request yang menunggu pembayaran</div>'
+        : pendingItems.map((item, i) => queueItemHTML(item, i, 'pending')).join('');
 }
 
 function queueItemHTML(item, idx, type) {
-    const badgeClass = type === 'priority' ? 'bg-danger' : 'bg-secondary';
+    const badgeClass = type === 'priority' ? 'bg-danger' : (type === 'fifo' ? 'bg-warning text-dark' : 'bg-secondary text-dark');
+    const nominalBadge = (item.nominal && item.nominal > 0) ? `<span class="badge bg-success bg-opacity-10 text-success border-0" style="font-size:0.7rem;">${formatCurrency(item.nominal)}</span>` : '';
+    const pendingLabel = (type === 'pending') ? `<div class="small text-muted">Menunggu pembayaran</div>` : '';
+
     return `
         <div class="queue-item list-group-item border-0 px-3 py-3">
             <div class="d-flex align-items-center gap-3">
@@ -544,9 +570,10 @@ function queueItemHTML(item, idx, type) {
                 <div class="flex-grow-1 min-width-0">
                     <h6 class="fw-bold mb-0 text-truncate" style="font-size:0.9rem;">${item.title}</h6>
                     <small class="text-muted text-truncate d-block">${item.artist}</small>
+                    ${pendingLabel}
                 </div>
                 <div class="text-end" style="min-width: 70px;">
-                    ${type === 'priority' ? `<span class="badge bg-success bg-opacity-10 text-success border-0" style="font-size:0.7rem;">${formatCurrency(item.nominal)}</span>` : ''}
+                    ${nominalBadge}
                     <small class="text-muted d-block">${formatDuration(item.duration)}</small>
                 </div>
             </div>

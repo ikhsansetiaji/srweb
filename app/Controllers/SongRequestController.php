@@ -333,6 +333,7 @@ class SongRequestController extends BaseController
                 'total_waiting' => $totalWaiting,
                 'priority_count' => count($queue['priority'] ?? []),
                 'fifo_count' => count($queue['fifo'] ?? []),
+                'pending_payment_count' => count($queue['pending_payments'] ?? []),
             ]
         ];
 
