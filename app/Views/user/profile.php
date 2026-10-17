@@ -185,7 +185,7 @@
                     <div class="label">Total Request Lagu</div>
                 </div>
                 <div class="stat-box">
-                    <div class="value">Rp <?= number_format($totalSpent, 0, ',', '.') ?></div>
+                    <div class="value">Rp <?= number_format($totalSpent, 2, ',', '.') ?></div>
                     <div class="label">Total Saweran</div>
                 </div>
             </div>
@@ -211,7 +211,64 @@
                     <small class="text-muted mt-1 d-block"><i class="fas fa-info-circle me-1"></i>Email dan Username tidak dapat diubah.</small>
                 </div>
 
-                <div class="text-end mt-4">
+                <!-- Nomor HP & WhatsApp -->
+                <div class="form-group-sr">
+                    <label for="phone">Nomor Handphone (HP)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border"><i class="fas fa-phone-alt text-danger"></i></span>
+                        <input type="tel" id="phone" name="phone" class="form-control form-control-lg border-start-0" value="<?= esc($user['phone'] ?? '') ?>" placeholder="08xxxxxxxxxx">
+                    </div>
+                    <small class="text-muted mt-1 d-block">Nomor kontak utama akun Anda.</small>
+                </div>
+
+                <?php 
+                    $userPhone = trim((string)($user['phone'] ?? ''));
+                    $userWa = trim((string)($user['phone_wa'] ?? ''));
+                    $isSameWa = empty($userWa) || ($userPhone !== '' && ($userPhone === $userWa || '62'.ltrim($userPhone, '0') === $userWa));
+                    $waEnabled = \App\Services\WhatsAppNotificationService::parseBoolean($user['wa_notif_enabled'] ?? true);
+                ?>
+
+                <div class="p-3 mb-4 rounded-3 border bg-light">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="fw-bold text-dark">
+                            <i class="fab fa-whatsapp text-success me-1"></i> Notifikasi WhatsApp
+                        </div>
+                        <?php if (!empty($userWa)): ?>
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 small">
+                                <i class="fas fa-check-circle me-1"></i> Terhubung
+                            </span>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="is_wa_same" name="is_wa_same" value="1" <?= $isSameWa ? 'checked' : '' ?>>
+                        <label class="form-check-label small fw-semibold" for="is_wa_same">
+                            Nomor WhatsApp sama dengan Nomor HP di atas
+                        </label>
+                    </div>
+
+                    <div id="profileWaSeparate" style="<?= $isSameWa ? 'display: none;' : '' ?>" class="mt-2 pt-2 border-top">
+                        <label for="phone_wa" class="form-label small fw-bold text-dark">Nomor WhatsApp Khusus</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white"><i class="fab fa-whatsapp text-success"></i></span>
+                            <input type="tel" class="form-control" id="phone_wa" name="phone_wa" value="<?= esc($userWa) ?>" placeholder="Contoh: 081234567890">
+                        </div>
+                        <small class="text-muted d-block mt-1">Gunakan nomor ini khusus untuk pengiriman pesan WhatsApp.</small>
+                    </div>
+
+                    <div class="form-check form-switch mt-3 pt-2 border-top">
+                        <input class="form-check-input" type="checkbox" id="wa_notif_enabled" name="wa_notif_enabled" value="1" <?= $waEnabled ? 'checked' : '' ?>>
+                        <label class="form-check-label small text-dark fw-semibold" for="wa_notif_enabled">
+                            Aktifkan notifikasi otomatis via WhatsApp
+                        </label>
+                        <div class="text-muted small">Menerima update saat pembayaran berhasil/gagal, lagu masuk antrean, mulai diputar, dan selesai diputar.</div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4 flex-wrap">
+                    <button type="button" class="btn btn-outline-danger rounded-pill px-4" id="testEmailBtn">
+                        <i class="fas fa-paper-plane me-2"></i>Kirim Email Percobaan
+                    </button>
                     <button type="submit" class="btn-save-profile" id="submitBtn">
                         <i class="fas fa-save"></i> Simpan Perubahan
                     </button>
@@ -225,6 +282,22 @@
 
 <?= $this->section('js') ?>
 <script>
+// Toggle separate WA input in profile
+const isWaSameProfile = document.getElementById('is_wa_same');
+const profileWaSeparate = document.getElementById('profileWaSeparate');
+const phoneWaProfile = document.getElementById('phone_wa');
+
+if (isWaSameProfile && profileWaSeparate) {
+    isWaSameProfile.addEventListener('change', function() {
+        if (this.checked) {
+            profileWaSeparate.style.display = 'none';
+        } else {
+            profileWaSeparate.style.display = 'block';
+            if (phoneWaProfile) phoneWaProfile.focus();
+        }
+    });
+}
+
 document.getElementById('profileForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -274,6 +347,43 @@ document.getElementById('profileForm').addEventListener('submit', async function
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-save"></i> Simpan Perubahan';
+    }
+});
+
+document.getElementById('testEmailBtn').addEventListener('click', async function() {
+    const button = this;
+    const csrfTokenName = '<?= csrf_token() ?>';
+    const csrfTokenInput = document.querySelector(`input[name="${csrfTokenName}"]`);
+    const formData = new FormData();
+
+    if (csrfTokenInput) {
+        formData.append(csrfTokenName, csrfTokenInput.value);
+    }
+
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Mengirim...';
+
+    try {
+        const response = await fetch('/user/email-test', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            showAlert(data.message || 'Email percobaan berhasil dikirim', 'success');
+        } else {
+            showAlert(data.message || 'Gagal mengirim email percobaan', 'danger');
+        }
+    } catch (error) {
+        showAlert('Koneksi bermasalah: ' + error.message, 'danger');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Kirim Email Percobaan';
     }
 });
 </script>

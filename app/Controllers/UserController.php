@@ -14,6 +14,7 @@ class UserController extends BaseController
     protected $requestModel;
     protected $cafeModel;
     protected $userModel;
+    protected $notificationEmailService;
 
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
     {
@@ -21,6 +22,7 @@ class UserController extends BaseController
         $this->requestModel = new SongRequestModel();
         $this->cafeModel = new CafeModel();
         $this->userModel = new UserModel();
+        $this->notificationEmailService = service('notificationEmail');
     }
 
     /**
@@ -101,7 +103,11 @@ class UserController extends BaseController
         $userId = session()->get('user_id');
 
         $rules = [
-            'name' => 'required|string|max_length[100]',
+            'name'             => 'required|string|max_length[100]',
+            'phone'            => 'permit_empty|string|max_length[20]',
+            'phone_wa'         => 'permit_empty|string|max_length[20]',
+            'is_wa_same'       => 'permit_empty',
+            'wa_notif_enabled' => 'permit_empty',
         ];
 
         if (!$this->validate($rules)) {
@@ -111,12 +117,27 @@ class UserController extends BaseController
             ]);
         }
 
-        $name = $this->request->getVar('name');
+        $name           = $this->request->getVar('name');
+        $phone          = $this->request->getVar('phone');
+        $phoneWa        = $this->request->getVar('phone_wa');
+        $isWaSame       = $this->request->getVar('is_wa_same');
+        $waNotifEnabled = $this->request->getVar('wa_notif_enabled');
 
-        if ($this->userModel->update($userId, [
-            'name' => $name,
-            'updated_at' => date('Y-m-d H:i:s'),
-        ])) {
+        $isSame = filter_var($isWaSame ?? true, FILTER_VALIDATE_BOOLEAN);
+        $finalPhoneWa = ($isSame || empty($phoneWa)) ? $phone : $phoneWa;
+
+        $fonnteService = new \App\Services\FonnteService();
+        $normalizedPhoneWa = !empty($finalPhoneWa) ? ($fonnteService->normalizePhone($finalPhoneWa) ?: $finalPhoneWa) : null;
+
+        $updateData = [
+            'name'             => $name,
+            'phone'            => $phone ?: null,
+            'phone_wa'         => $normalizedPhoneWa,
+            'wa_notif_enabled' => \App\Services\WhatsAppNotificationService::parseBoolean($waNotifEnabled ?? false),
+            'updated_at'       => date('Y-m-d H:i:s'),
+        ];
+
+        if ($this->userModel->update($userId, $updateData)) {
             // Update session name
             session()->set('user_name', $name);
 
@@ -129,6 +150,36 @@ class UserController extends BaseController
         return $this->response->setStatusCode(400)->setJSON([
             'success' => false,
             'message' => 'Gagal memperbarui profil'
+        ]);
+    }
+
+    /**
+     * Send test email to the logged-in user's stored email
+     */
+    public function sendTestEmail()
+    {
+        $userId = session()->get('user_id');
+        $user = $this->userModel->find($userId);
+
+        if (!$user) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'success' => false,
+                'message' => 'User tidak ditemukan'
+            ]);
+        }
+
+        $result = $this->notificationEmailService->sendTestEmail($user);
+
+        if ($result['success']) {
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Email percobaan berhasil dikirim ke alamat akun Anda'
+            ]);
+        }
+
+        return $this->response->setStatusCode(400)->setJSON([
+            'success' => false,
+            'message' => $result['message'] ?? 'Gagal mengirim email percobaan'
         ]);
     }
 }

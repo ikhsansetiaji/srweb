@@ -104,10 +104,46 @@ class CafeController extends BaseController
             ]);
         }
 
+        // Quick-toggle: if only aggregate_enabled is provided (AJAX toggle), skip full validation
+        $postedAggregate = $this->request->getPost('aggregate_enabled');
+        $postedNama = $this->request->getPost('nama_kafe');
+        $postedAlamat = $this->request->getPost('alamat');
+
+        if ($postedAggregate !== null && $postedNama === null && $postedAlamat === null) {
+            // Use explicit DB update to ensure boolean literal is written correctly for Postgres
+            $db = \Config\Database::connect();
+            $enabledBool = (bool) filter_var($postedAggregate, FILTER_VALIDATE_BOOLEAN);
+
+            $builder = $db->table('cafes');
+            $builder->where('id', $cafeId);
+            // set boolean literal (unescaped) so Postgres receives TRUE/FALSE
+            $builder->set('aggregate_enabled', $enabledBool ? 'TRUE' : 'FALSE', false);
+            $builder->set('updated_at', date('Y-m-d H:i:s'));
+
+            try {
+                $updated = $builder->update();
+                if ($updated) {
+                    return $this->response->setJSON([
+                        'success' => true,
+                        'message' => 'Pengaturan aggregate berhasil diperbarui',
+                        'aggregate_enabled' => $enabledBool
+                    ]);
+                }
+            } catch (\Exception $e) {
+                log_message('error', 'Cafe aggregate update error: ' . $e->getMessage());
+            }
+
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'message' => 'Gagal menyimpan pengaturan aggregate'
+            ]);
+        }
+
         $rules = [
             'nama_kafe' => 'required|string|max_length[100]',
             'alamat' => 'required|string',
             'phone_number' => 'permit_empty|string|max_length[20]',
+            'aggregate_enabled' => 'permit_empty',
         ];
 
         if (!$this->validate($rules)) {
@@ -121,6 +157,7 @@ class CafeController extends BaseController
             'nama_kafe' => $this->request->getPost('nama_kafe'),
             'alamat' => $this->request->getPost('alamat'),
             'phone_number' => $this->request->getPost('phone_number'),
+            'aggregate_enabled' => (bool) filter_var($this->request->getPost('aggregate_enabled'), FILTER_VALIDATE_BOOLEAN),
             'updated_at' => date('Y-m-d H:i:s'),
         ];
 

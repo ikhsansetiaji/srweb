@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\PaymentModel;
 use App\Models\SongRequestModel;
 use App\Models\CafeBalanceModel;
+use App\Models\FinancialLedgerModel;
 use Config\Database;
 
 class PaymentService
@@ -12,6 +13,7 @@ class PaymentService
     protected $paymentModel;
     protected $requestModel;
     protected $balanceModel;
+    protected $ledgerModel;
     protected $db;
 
     public function __construct()
@@ -19,6 +21,7 @@ class PaymentService
         $this->paymentModel = new PaymentModel();
         $this->requestModel = new SongRequestModel();
         $this->balanceModel = new CafeBalanceModel();
+        $this->ledgerModel  = new FinancialLedgerModel();
         $this->db = Database::connect();
     }
 
@@ -100,12 +103,35 @@ class PaymentService
                 return ['success' => false, 'message' => 'Failed to update payment status'];
             }
 
-            // If success, update cafe balance + aktifkan song request ke antrean
+            // If success, update cafe balance (ATOMIC) + ledger + aktifkan song request ke antrean
             if ($status === 'success') {
-                if (!$this->balanceModel->addBalance($payment['cafe_id'], $payment['amount'])) {
+                $cafeId = (int)$payment['cafe_id'];
+                $amount = (int)$payment['amount'];
+
+                // Atomic balance update — mencegah race condition pada webhook paralel
+                $newBalance = $this->balanceModel->addBalanceAtomic($cafeId, $amount);
+                if ($newBalance === false) {
                     $this->db->transRollback();
-                    log_message('error', "Failed to add balance for payment: {$payment['id']}");
+                    log_message('error', "Failed to add balance atomically for payment: {$payment['id']}");
                     return ['success' => false, 'message' => 'Failed to update cafe balance'];
+                }
+
+                // Catat ke financial ledger
+                $ledgerEntry = $this->ledgerModel->recordCredit(
+                    $cafeId,
+                    $amount,
+                    FinancialLedgerModel::TYPE_PAYMENT_INCOME,
+                    $newBalance,
+                    'payment',
+                    (int)$payment['id'],
+                    null,
+                    'Pembayaran request lagu #' . $payment['request_id'] . ' berhasil'
+                );
+
+                if (!$ledgerEntry) {
+                    $this->db->transRollback();
+                    log_message('error', "Failed to record ledger for payment: {$payment['id']}");
+                    return ['success' => false, 'message' => 'Failed to record financial ledger'];
                 }
 
                 // Pindahkan song_request dari pending_payment → waiting (masuk antrean)
@@ -128,12 +154,51 @@ class PaymentService
             $this->db->transComplete();
 
             if ($this->db->transStatus()) {
-                log_message('info', "Payment webhook processed: Payment ID {$payment['id']}, Status: $status");
-                return ['success' => true, 'message' => 'Payment processed', 'payment_id' => $payment['id']];
+                log_message('info', "Payment webhook processed: Payment ID {$payment['id']}, Status: {$status}");
+
+                // ── Notifikasi WhatsApp & Email (SETELAH transaksi DB commit) ─────
+                // Kegagalan notifikasi TIDAK boleh membalikkan transaksi yang sudah selesai.
+                $paymentId = (int)$payment['id'];
+                $requestId = (int)$payment['request_id'];
+
+                // 1. WhatsApp
+                try {
+                    /** @var \App\Services\WhatsAppNotificationService $wa */
+                    $wa = service('whatsappNotification');
+                    if ($status === 'success') {
+                        $wa->onPaymentSuccess($paymentId);
+                        if ($requestId) {
+                            $wa->onRequestQueued($requestId);
+                        }
+                    } elseif (in_array($status, ['failed', 'expired'], true)) {
+                        $wa->onPaymentFailed($paymentId, $status);
+                    }
+                } catch (\Throwable $waEx) {
+                    log_message('error', 'WhatsApp notification error (non-critical): ' . $waEx->getMessage());
+                }
+
+                // 2. Email Notifikasi (Brevo)
+                try {
+                    /** @var \App\Services\NotificationEmailService $emailService */
+                    $emailService = service('notificationEmail');
+                    if ($status === 'success') {
+                        $emailService->onPaymentSuccess($paymentId);
+                        if ($requestId) {
+                            $emailService->onSongRequestCreated($requestId);
+                        }
+                    } elseif (in_array($status, ['failed', 'expired'], true)) {
+                        $emailService->onPaymentFailed($paymentId, $status);
+                    }
+                } catch (\Throwable $emailEx) {
+                    log_message('error', 'Email payment notification error (non-critical): ' . $emailEx->getMessage());
+                }
+                // ── End notifikasi ────────────────────────────────────────────────
+
+                return ['success' => true, 'message' => 'Payment processed', 'payment_id' => $paymentId];
             }
         } catch (\Exception $e) {
             $this->db->transRollback();
-            log_message('error', "Payment webhook error: " . $e->getMessage());
+            log_message('error', 'Payment webhook error: ' . $e->getMessage());
         }
 
         return ['success' => false, 'message' => 'Payment processing failed'];

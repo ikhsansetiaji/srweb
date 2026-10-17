@@ -25,25 +25,26 @@
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top" style="background-color: #333333;">
+    <nav class="navbar navbar-expand-lg navbar-sr sticky-top">
         <div class="container-lg">
-            <a class="navbar-brand fw-bold" href="<?= base_url('/') ?>">
-                <i class="fas fa-music" style="color: #FF4500;"></i> Song Request
+            <a class="navbar-brand" href="<?= base_url('/') ?>">
+                <i class="fas fa-compact-disc text-coral"></i>
+                <span>Song Request</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <i class="fas fa-bars" style="color: var(--text-dark);"></i>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-1">
                     <?php if (session()->has('user_id')): ?>
                         <!-- Logged in navigation -->
                         <?php if (session()->get('user_role') === 'admin'): ?>
                             <li class="nav-item">
-                                <a class="nav-link" href="/admin/dashboard">Dashboard</a>
+                                <a class="nav-link" href="/admin/dashboard"><i class="fas fa-store me-1"></i>Dashboard Kafe</a>
                             </li>
                         <?php elseif (session()->get('user_role') === 'superadmin'): ?>
                             <li class="nav-item">
-                                <a class="nav-link" href="/superadmin/dashboard">Dashboard</a>
+                                <a class="nav-link" href="/superadmin/dashboard"><i class="fas fa-shield-alt me-1"></i>Superadmin</a>
                             </li>
                         <?php else: ?>
                             <!-- User menu -->
@@ -58,28 +59,31 @@
                             </li>
                         <?php endif; ?>
 
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-user-circle me-1"></i><?= esc(session()->get('user_name') ?? 'Akun') ?>
+                        <li class="nav-item dropdown ms-lg-2">
+                            <a class="nav-link dropdown-toggle btn-secondary-custom px-3 py-2 rounded-pill d-inline-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-circle me-2 text-coral"></i>
+                                <span><?= esc(session()->get('user_name') ?? 'Akun') ?></span>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2">
                                 <?php if (session()->get('user_role') === 'user'): ?>
-                                    <li><a class="dropdown-item" href="/user/profile"><i class="fas fa-id-card me-2"></i>Profil</a></li>
-                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item py-2" href="/user/profile"><i class="fas fa-id-card me-2 text-muted"></i>Profil Saya</a></li>
+                                    <li><hr class="dropdown-divider my-1"></li>
                                 <?php endif; ?>
-                                <li><a class="dropdown-item" href="/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>Keluar</a></li>
+                                <li><a class="dropdown-item py-2 text-danger" href="/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>Keluar</a></li>
                             </ul>
                         </li>
                     <?php else: ?>
                         <!-- Guest navigation -->
                         <li class="nav-item">
-                            <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#partnerModal"><i class="fas fa-handshake me-1"></i>Jadi Partner Kami</a>
+                            <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#partnerModal"><i class="fas fa-handshake me-1 text-coral"></i>Jadi Partner</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/auth/login">Login</a>
+                            <a class="nav-link" href="/auth/login"><i class="fas fa-sign-in-alt me-1"></i>Masuk</a>
                         </li>
-                        <li class="nav-item ms-2">
-                            <a class="btn btn-danger btn-sm" href="/song-request/request">Request Lagu</a>
+                        <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
+                            <a class="btn btn-coral btn-sm px-4 py-2" href="/song-request/request">
+                                <i class="fas fa-music me-1"></i>Request Lagu
+                            </a>
                         </li>
                     <?php endif; ?>
                 </ul>
@@ -93,84 +97,48 @@
     </main>
 
     <!-- Footer -->
-    <footer class="footer">
+    <footer class="footer-sr">
         <div class="container-lg">
-            <div class="row gy-5">
+            <div class="row gy-4">
                 <!-- Brand -->
                 <div class="col-lg-5">
                     <div class="footer-brand">
                         <h4>
-                            🎵 Song Request
+                            <i class="fas fa-music text-coral me-2"></i>Song Request
                         </h4>
                         <p>
-                            Jadikan setiap lagu sebagai bagian dari pengalaman
-                            nongkrong. Pilih lagu favoritmu, masuk antrian,
-                            dan ciptakan suasana yang lebih hidup di kafe.
+                            Jadikan setiap lagu sebagai bagian dari pengalaman nongkrong.
+                            Pilih lagu favoritmu, masuk antrean, dan ciptakan suasana yang lebih hidup di kafe Small Space.
                         </p>
                     </div>
                 </div>
                 <!-- Navigasi -->
                 <div class="col-md-3">
-                    <h6>
-                        Navigasi
-                    </h6>
+                    <h6>Navigasi</h6>
                     <ul class="footer-links">
-                        <li>
-                            <a href="<?= base_url('/') ?>">
-                                Beranda
-                            </a>
-                        </li>
-                        <li>
-                            <a href="<?= base_url('/#how-it-works') ?>">
-                                Cara Kerja
-                            </a>
-                        </li>
-                        <li>
-                            <a href="<?= base_url('/#features') ?>">
-                                Keunggulan
-                            </a>
-                        </li>
+                        <li><a href="<?= base_url('/') ?>"><i class="fas fa-chevron-right me-1 small"></i> Beranda</a></li>
+                        <li><a href="<?= base_url('/#how-it-works') ?>"><i class="fas fa-chevron-right me-1 small"></i> Cara Kerja</a></li>
+                        <li><a href="<?= base_url('/#features') ?>"><i class="fas fa-chevron-right me-1 small"></i> Keunggulan</a></li>
+                        <li><a href="<?= base_url('/song-request/request') ?>"><i class="fas fa-chevron-right me-1 small"></i> Request Lagu</a></li>
                     </ul>
-
                 </div>
 
                 <!-- Kontak -->
                 <div class="col-md-4">
-                    <h6>
-                        Hubungi Kami
-                    </h6>
-
+                    <h6>Hubungi Kami</h6>
                     <ul class="footer-links">
-
-                        <li>
-                            <i class="fas fa-envelope me-2"></i>
-                            contact@songrequest.id
-                        </li>
-
-                        <li>
-                            <i class="fas fa-phone me-2"></i>
-                            +62 812 3456 7890
-                        </li>
-
-                        <li>
-                            <i class="fas fa-map-marker-alt me-2"></i>
-                            Indonesia
-                        </li>
-
+                        <li><i class="fas fa-envelope text-coral me-2"></i> contact@songrequest.id</li>
+                        <li><i class="fas fa-phone text-coral me-2"></i> +62 812 3456 7890</li>
+                        <li><i class="fas fa-map-marker-alt text-coral me-2"></i> Yogyakarta, Indonesia</li>
                     </ul>
-
                 </div>
-
             </div>
 
             <div class="footer-bottom">
-
-                <p>
-                    © 2026 Song Request. Dibuat untuk menghadirkan pengalaman musik yang lebih personal.
+                <p class="mb-0">
+                    &copy; 2026 Song Request Kafe Small Space. Seluruh hak cipta dilindungi.
                 </p>
-
             </div>
-
         </div>
     </footer>
 

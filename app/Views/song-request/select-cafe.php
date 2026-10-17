@@ -171,7 +171,7 @@
     <div class="select-cafe-container">
         <!-- Header -->
         <div class="header-section">
-            <h2>Pilih Kafe Terdekat</h2>
+            <h2>Pilih Kafe Terbaikmu</h2>
             <p>Silakan pilih kafe tempat Anda berada sekarang untuk mulai request lagu favorit Anda.</p>
         </div>
 
