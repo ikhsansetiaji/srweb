@@ -124,30 +124,57 @@ class PaymentModel extends Model
      */
     public function getPaymentWithDetails(int $paymentId): ?array
     {
-        return $this->select('payments.*, song_requests.nominal, cafes.nama_kafe, users.name')
+        return $this->select('payments.*, song_requests.nominal, song_requests.guest_name, song_requests.phone_wa, song_requests.wa_consent, cafes.nama_kafe, users.name, songs.title, songs.artist')
             ->join('song_requests', 'payments.request_id = song_requests.id', 'left')
+            ->join('songs', 'song_requests.song_id = songs.id', 'left')
             ->join('cafes', 'payments.cafe_id = cafes.id', 'left')
             ->join('users', 'song_requests.user_id = users.id', 'left')
             ->find($paymentId);
     }
 
     /**
-     * Get cafe payments dengan pagination
+     * Get cafe payments dengan pagination dan filter opsional.
      *
-     * @param int $cafeId
-     * @param int $limit
-     * @param int $offset
+     * @param int    $cafeId
+     * @param int    $limit
+     * @param int    $offset
+     * @param string $status   Filter status (kosong = semua)
+     * @param string $dateFrom Filter tanggal mulai (Y-m-d)
+     * @param string $dateTo   Filter tanggal akhir (Y-m-d)
      * @return array
      */
-    public function getCafePayments(int $cafeId, int $limit = 50, int $offset = 0): array
+    public function getCafePayments(int $cafeId, int $limit = 50, int $offset = 0, string $status = '', string $dateFrom = '', string $dateTo = ''): array
     {
-        return $this->select('payments.*, song_requests.nominal, songs.title, songs.artist')
+        $q = $this->select('payments.*, song_requests.nominal, songs.title, songs.artist')
             ->join('song_requests', 'payments.request_id = song_requests.id', 'left')
             ->join('songs', 'song_requests.song_id = songs.id', 'left')
-            ->where('payments.cafe_id', $cafeId)
-            ->orderBy('payments.created_at', 'DESC')
-            ->limit($limit, $offset)
-            ->findAll();
+            ->where('payments.cafe_id', $cafeId);
+
+        if ($status) {
+            $q = $q->where('payments.payment_status', $status);
+        }
+        if ($dateFrom) {
+            $q = $q->where("DATE(payments.created_at) >=", $dateFrom);
+        }
+        if ($dateTo) {
+            $q = $q->where("DATE(payments.created_at) <=", $dateTo);
+        }
+
+        return $q->orderBy('payments.created_at', 'DESC')
+                 ->limit($limit, $offset)
+                 ->findAll();
+    }
+
+    /**
+     * Count cafe payments dengan filter opsional (untuk pagination).
+     */
+    public function countCafePayments(int $cafeId, string $status = '', string $dateFrom = '', string $dateTo = ''): int
+    {
+        $q = $this->where('cafe_id', $cafeId);
+        if ($status) $q = $q->where('payment_status', $status);
+        if ($dateFrom) $q = $q->where("DATE(created_at) >=", $dateFrom);
+        if ($dateTo)   $q = $q->where("DATE(created_at) <=", $dateTo);
+        return $q->countAllResults();
     }
 
     /**

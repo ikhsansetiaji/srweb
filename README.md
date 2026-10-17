@@ -71,7 +71,8 @@ composer install
 
 # 3. Konfigurasi environment
 cp env .env
-# Edit .env: isi baseURL, database, Spotify API key, Midtrans key
+# Edit .env: isi baseURL, database, Spotify API key, Midtrans key,
+# serta RESEND_API_KEY, RESEND_FROM_EMAIL, dan TESTMAIL_INBOX_EMAIL
 
 # 4. Jalankan migrasi
 php spark migrate
@@ -81,6 +82,14 @@ php spark serve
 ```
 
 Akses di `http://localhost:8080`
+
+### Email notification setup
+- Daftarkan Resend dan verifikasi domain/sender yang akan dipakai sebagai `RESEND_FROM_EMAIL`.
+- Isi `RESEND_API_KEY` di `.env` dengan API key Resend.
+- Jika pakai XAMPP/Windows dan muncul error SSL, set `RESEND_VERIFY_SSL = false` untuk development.
+- Untuk testing, ubah email akun user di database menjadi alamat inbox Testmail yang aktif.
+- Gunakan tombol **Kirim Email Percobaan** di halaman profil user untuk mengirim email test ke inbox tersebut.
+- Jika domain belum terverifikasi di Resend, gunakan sender dari domain yang sudah diverifikasi atau alamat dev yang diizinkan Resend untuk environment development.
 
 ---
 

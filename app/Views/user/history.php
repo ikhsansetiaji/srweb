@@ -187,7 +187,7 @@
                                 </td>
                                 <td>
                                     <span class="text-warning fw-semibold">
-                                        <?= $req['queue_type'] === 'priority' ? 'Rp ' . number_format($req['nominal'], 0, ',', '.') : 'Gratis' ?>
+                                        <?= $req['queue_type'] === 'priority' ? 'Rp ' . number_format($req['nominal'], 2, ',', '.') : 'Gratis' ?>
                                     </span>
                                 </td>
                                 <td>

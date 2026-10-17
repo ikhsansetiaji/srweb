@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\SongRequestModel;
 use App\Models\SongModel;
 use App\Models\CafeModel;
+use App\Models\UserModel;
 use App\Services\QueueService;
 use App\Services\SpotifyService;
 use CodeIgniter\HTTP\RequestInterface;
@@ -16,7 +17,9 @@ class SongRequestController extends BaseController
     protected $requestModel;
     protected $songModel;
     protected $cafeModel;
+    protected $userModel;
     protected $queueService;
+    protected $notificationEmailService;
 
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
     {
@@ -24,7 +27,9 @@ class SongRequestController extends BaseController
         $this->requestModel = new SongRequestModel();
         $this->songModel = new SongModel();
         $this->cafeModel = new CafeModel();
+        $this->userModel = new UserModel();
         $this->queueService = new QueueService();
+        $this->notificationEmailService = service('notificationEmail');
     }
 
     /**
@@ -48,7 +53,17 @@ class SongRequestController extends BaseController
             ]);
         }
 
-        return view('song-request/request', ['cafe' => $cafe]);
+        $queueStats = $this->queueService->getQueueStats($cafeId);
+        $currentlyPlaying = $this->requestModel->getCurrentlyPlaying($cafeId);
+        $userId = session()->get('user_id');
+        $currentUser = $userId ? $this->userModel->find($userId) : null;
+
+        return view('song-request/request', [
+            'cafe'              => $cafe,
+            'queue_stats'       => $queueStats,
+            'currently_playing' => $currentlyPlaying,
+            'current_user'      => $currentUser,
+        ]);
     }
 
     /**
@@ -123,12 +138,14 @@ class SongRequestController extends BaseController
         $nominalRule = ($queueType === 'fifo') ? 'permit_empty|integer' : 'required|integer|greater_than[0]';
 
         $rules = [
-            'cafe_id' => 'required|integer',
-            'song_id' => 'required|integer',
-            'nominal' => $nominalRule,
+            'cafe_id'    => 'required|integer',
+            'song_id'    => 'required|integer',
+            'nominal'    => $nominalRule,
             'queue_type' => 'required|in_list[priority,fifo]',
             'guest_name' => 'permit_empty|string|max_length[100]',
-            'user_id' => 'permit_empty|integer',
+            'user_id'    => 'permit_empty|integer',
+            'phone_wa'   => 'permit_empty|string|max_length[20]',
+            'wa_consent' => 'permit_empty',
         ];
 
         if (!$this->validate($rules)) {
@@ -158,27 +175,71 @@ class SongRequestController extends BaseController
             ]);
         }
 
+        $userId = $this->request->getVar('user_id') ?: session()->get('user_id');
+        $phoneWa = $this->request->getVar('phone_wa');
+        $waConsentRaw = $this->request->getVar('wa_consent');
+
+        // Jika pengunjung sudah login dan nomor WA tidak diisi form, ambil otomatis dari profil user
+        if (!empty($userId)) {
+            $user = $this->userModel->find((int)$userId);
+            if ($user) {
+                if (empty($phoneWa) && !empty($user['phone_wa'])) {
+                    $phoneWa = $user['phone_wa'];
+                } elseif (empty($phoneWa) && !empty($user['phone'])) {
+                    $phoneWa = $user['phone'];
+                }
+                if ($waConsentRaw === null && isset($user['wa_notif_enabled'])) {
+                    $waConsentRaw = $user['wa_notif_enabled'];
+                }
+            }
+        }
+
+        $fonnteService = new \App\Services\FonnteService();
+        $normalizedPhoneWa = !empty($phoneWa) ? ($fonnteService->normalizePhone($phoneWa) ?: $phoneWa) : null;
+
         $data = [
-            'cafe_id' => $cafeId,
-            'song_id' => $songId,
-            'nominal' => ($queueType === 'fifo') ? 0 : (int)$this->request->getVar('nominal'),
+            'cafe_id'    => $cafeId,
+            'song_id'    => $songId,
+            'nominal'    => ($queueType === 'fifo') ? 0 : (int)$this->request->getVar('nominal'),
             'queue_type' => $queueType,
             'guest_name' => $this->request->getVar('guest_name') ?: 'Anonim',
-            'user_id' => $this->request->getVar('user_id') ?: session()->get('user_id'),
+            'user_id'    => $userId,
+            // WhatsApp notification fields (opsional, auto-fill jika user login)
+            'phone_wa'   => $normalizedPhoneWa,
+            'wa_consent' => \App\Services\WhatsAppNotificationService::parseBoolean($waConsentRaw ?? false),
         ];
 
         $requestId = $this->requestModel->createRequest($data);
 
         if ($requestId) {
+            if (!empty($data['user_id'])) {
+                $user = $this->userModel->find((int) $data['user_id']);
+                if ($user && !empty($user['email'])) {
+                    $this->notificationEmailService->sendRequestCreatedEmail((int) $requestId);
+                }
+            }
+
+            // Notifikasi WA: FIFO request langsung masuk antrean (waiting)
+            // Priority: notifikasi dikirim dari PaymentService setelah payment confirmed
+            if ($queueType === 'fifo') {
+                try {
+                    /** @var \App\Services\WhatsAppNotificationService $wa */
+                    $wa = service('whatsappNotification');
+                    $wa->onRequestQueued((int)$requestId);
+                } catch (\Throwable $waEx) {
+                    log_message('error', 'WA notification error (non-critical) createRequest: ' . $waEx->getMessage());
+                }
+            }
+
             $redirectUrl = ($queueType === 'fifo')
                 ? "/song-request/request?cafe_id=$cafeId&success=1"
                 : "/payment/checkout?request_id=$requestId";
 
             return $this->response->setJSON([
-                'success' => true,
-                'message' => 'Request created',
+                'success'    => true,
+                'message'    => 'Request created',
                 'request_id' => $requestId,
-                'redirect' => $redirectUrl
+                'redirect'   => $redirectUrl
             ]);
         }
 
@@ -270,6 +331,13 @@ class SongRequestController extends BaseController
         }
 
         if ($this->requestModel->cancelRequest($requestId)) {
+            try {
+                $email = service('notificationEmail');
+                $email->onSongStatusChanged((int)$requestId, 'cancelled');
+            } catch (\Throwable $emailEx) {
+                log_message('error', 'Email cancelRequest error (non-critical): ' . $emailEx->getMessage());
+            }
+
             return $this->response->setJSON([
                 'success' => true,
                 'message' => 'Request cancelled'
@@ -407,6 +475,15 @@ class SongRequestController extends BaseController
         }
 
         if ($this->requestModel->updateStatus($requestId, 'playing')) {
+            // Notifikasi WA: lagu mulai diputar
+            try {
+                /** @var \App\Services\WhatsAppNotificationService $wa */
+                $wa = service('whatsappNotification');
+                $wa->onSongStarted($requestId);
+            } catch (\Throwable $waEx) {
+                log_message('error', 'WA notification error (non-critical) markAsPlaying: ' . $waEx->getMessage());
+            }
+
             return $this->response->setJSON([
                 'success' => true,
                 'message' => 'Lagu sedang diputar'
@@ -445,6 +522,15 @@ class SongRequestController extends BaseController
         }
 
         if ($this->requestModel->updateStatus($requestId, 'done')) {
+            // Notifikasi WA: lagu selesai diputar
+            try {
+                /** @var \App\Services\WhatsAppNotificationService $wa */
+                $wa = service('whatsappNotification');
+                $wa->onSongFinished($requestId);
+            } catch (\Throwable $waEx) {
+                log_message('error', 'WA notification error (non-critical) markAsDone: ' . $waEx->getMessage());
+            }
+
             return $this->response->setJSON([
                 'success' => true,
                 'message' => 'Lagu berhasil diselesaikan'

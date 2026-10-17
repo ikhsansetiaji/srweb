@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\AggregateQueueService;
 use CodeIgniter\Model;
 
 class SongRequestModel extends Model
@@ -11,7 +12,7 @@ class SongRequestModel extends Model
     protected $useAutoIncrement = true;
     protected $returnType = 'array';
     protected $useSoftDeletes = false;
-    protected $allowedFields = ['user_id', 'guest_name', 'cafe_id', 'song_id', 'nominal', 'queue_type', 'status', 'requested_at', 'played_at'];
+    protected $allowedFields = ['user_id', 'guest_name', 'phone_wa', 'wa_consent', 'wa_consent_at', 'cafe_id', 'song_id', 'nominal', 'queue_type', 'status', 'requested_at', 'played_at'];
     protected $useTimestamps = false;
 
     protected $validationRules = [
@@ -43,6 +44,17 @@ class SongRequestModel extends Model
     public function createRequest(array $data)
     {
         $data['guest_name'] = empty($data['guest_name']) ? 'Anonim' : $data['guest_name'];
+
+        // Normalisasi field WhatsApp (opsional)
+        if (!empty($data['phone_wa']) && !empty($data['wa_consent'])) {
+            $data['wa_consent']    = true;
+            $data['wa_consent_at'] = date('Y-m-d H:i:s');
+        } else {
+            // Jika tidak ada nomor atau consent tidak diberikan, simpan null/false
+            $data['phone_wa']      = $data['phone_wa'] ?? null;
+            $data['wa_consent']    = false;
+            $data['wa_consent_at'] = null;
+        }
 
         // Priority harus bayar dulu — status pending_payment sampai Midtrans konfirmasi
         $queueType = $data['queue_type'] ?? 'fifo';
@@ -126,35 +138,7 @@ class SongRequestModel extends Model
      */
     public function getAggregatedNextSong(int $cafeId): ?array
     {
-        $db = \Config\Database::connect();
-
-        $agg = $db->table('song_requests sr')
-            ->select('sr.song_id, SUM(sr.nominal) AS total_nominal, COUNT(sr.id) AS request_count, MIN(sr.requested_at) AS first_requested_at')
-            ->where('sr.cafe_id', $cafeId)
-            ->where('sr.nominal >', 0)
-            ->where('sr.status', 'waiting')
-            ->groupBy('sr.song_id')
-            ->orderBy('total_nominal', 'DESC')
-            ->orderBy('request_count', 'DESC')
-            ->orderBy('first_requested_at', 'ASC')
-            ->get()
-            ->getRowArray();
-
-        if (empty($agg) || empty($agg['song_id'])) {
-            return null;
-        }
-
-        // Ambil request pertama (earliest) untuk song tersebut yang masih waiting dan berbayar
-        $request = $this->select('song_requests.*, songs.title, songs.artist, songs.duration, songs.thumbnail, songs.spotify_url, songs.preview_url, songs.api_song_id')
-            ->join('songs', 'song_requests.song_id = songs.id', 'left')
-            ->where('song_requests.cafe_id', $cafeId)
-            ->where('song_requests.song_id', $agg['song_id'])
-            ->where('song_requests.nominal >', 0)
-            ->where('song_requests.status', 'waiting')
-            ->orderBy('song_requests.requested_at', 'ASC')
-            ->first();
-
-        return $request ?: null;
+        return (new AggregateQueueService())->getNextSong($cafeId);
     }
 
     /**
@@ -198,7 +182,7 @@ class SongRequestModel extends Model
     }
 
     /**
-     * Get requests untuk cafe dengan pagination
+     * Get requests untuk cafe dengan pagination.
      *
      * @param int $cafeId
      * @param int $limit
@@ -213,6 +197,78 @@ class SongRequestModel extends Model
             ->orderBy('song_requests.requested_at', 'DESC')
             ->limit($limit, $offset)
             ->findAll();
+    }
+
+    /**
+     * Get requests untuk cafe dengan filter dan pagination (untuk halaman riwayat lengkap).
+     *
+     * @param int    $cafeId
+     * @param int    $limit
+     * @param int    $offset
+     * @param string $status   Filter status
+     * @param string $dateFrom Filter tanggal mulai
+     * @param string $dateTo   Filter tanggal akhir
+     * @param string $search   Pencarian judul/artis
+     * @return array
+     */
+    public function getCafeRequestsFiltered(
+        int $cafeId,
+        int $limit = 20,
+        int $offset = 0,
+        string $status = '',
+        string $dateFrom = '',
+        string $dateTo = '',
+        string $search = ''
+    ): array {
+        $q = $this->select('song_requests.*, songs.title, songs.artist, songs.duration, songs.thumbnail')
+            ->join('songs', 'song_requests.song_id = songs.id', 'left')
+            ->where('song_requests.cafe_id', $cafeId);
+
+        if ($status) {
+            $q = $q->where('song_requests.status', $status);
+        }
+        if ($dateFrom) {
+            $q = $q->where("DATE(song_requests.requested_at) >=", $dateFrom);
+        }
+        if ($dateTo) {
+            $q = $q->where("DATE(song_requests.requested_at) <=", $dateTo);
+        }
+        if ($search) {
+            $q = $q->groupStart()
+                   ->like('songs.title', $search)
+                   ->orLike('songs.artist', $search)
+                   ->orLike('song_requests.guest_name', $search)
+                   ->groupEnd();
+        }
+
+        return $q->orderBy('song_requests.requested_at', 'DESC')
+                 ->limit($limit, $offset)
+                 ->findAll();
+    }
+
+    /**
+     * Count requests cafe dengan filter (untuk pagination).
+     */
+    public function countCafeRequests(
+        int $cafeId,
+        string $status = '',
+        string $dateFrom = '',
+        string $dateTo = '',
+        string $search = ''
+    ): int {
+        $q = $this->join('songs', 'song_requests.song_id = songs.id', 'left')
+                  ->where('song_requests.cafe_id', $cafeId);
+        if ($status)   $q = $q->where('song_requests.status', $status);
+        if ($dateFrom) $q = $q->where("DATE(song_requests.requested_at) >=", $dateFrom);
+        if ($dateTo)   $q = $q->where("DATE(song_requests.requested_at) <=", $dateTo);
+        if ($search) {
+            $q = $q->groupStart()
+                   ->like('songs.title', $search)
+                   ->orLike('songs.artist', $search)
+                   ->orLike('song_requests.guest_name', $search)
+                   ->groupEnd();
+        }
+        return $q->countAllResults();
     }
 
     /**

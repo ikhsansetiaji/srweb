@@ -72,6 +72,74 @@
     .queue-item:hover { background: #fafafa; }
     .stat-card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); transition: transform 0.15s; }
     .stat-card:hover { transform: translateY(-2px); }
+
+    .finance-shell {
+        background: #fff;
+        border: 1px solid #eef2f7;
+        border-radius: 16px;
+        box-shadow: 0 2px 16px rgba(15, 23, 42, 0.06);
+    }
+    .finance-card {
+        background: #fff;
+        border: 1px solid #eef2f7;
+        border-radius: 14px;
+        box-shadow: 0 1px 8px rgba(15, 23, 42, 0.04);
+    }
+    .finance-mini {
+        border-radius: 14px;
+        padding: 16px 18px;
+        background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+        border: 1px solid #eef2f7;
+    }
+    .finance-mini .label {
+        color: #6b7280;
+        font-size: 0.76rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+    .finance-mini .value {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: #111827;
+        margin-top: 4px;
+    }
+    .finance-table {
+        width: 100%;
+    }
+    .finance-table th {
+        background: #f8fafc;
+        color: #6b7280;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        padding: 10px 12px;
+        border-bottom: 1px solid #eef2f7;
+    }
+    .finance-table td {
+        padding: 11px 12px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.84rem;
+        vertical-align: middle;
+    }
+    .finance-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+    .finance-badge.success { background: #ecfdf5; color: #059669; }
+    .finance-badge.pending { background: #fff7ed; color: #d97706; }
+    .finance-badge.failed { background: #fef2f2; color: #dc2626; }
+    .finance-badge.waiting { background: #eff6ff; color: #2563eb; }
+    .finance-badge.done { background: #f0fdf4; color: #16a34a; }
+    .finance-badge.approved { background: #ecfdf5; color: #059669; }
+    .finance-badge.rejected { background: #fef2f2; color: #dc2626; }
+    .finance-badge.processing { background: #fdf4ff; color: #9333ea; }
+    .finance-badge.completed { background: #f0fdf4; color: #15803d; }
+    .finance-badge.paid { background: #f0fdf4; color: #16a34a; }
+    .finance-badge.cancelled { background: #f3f4f6; color: #6b7280; }
 </style>
 <?= $this->endSection() ?>
 
@@ -97,8 +165,11 @@
             <div class="form-check form-switch mb-0">
                 <input class="form-check-input" type="checkbox" role="switch" id="aggregateSwitch" <?= (!empty($cafe['aggregate_enabled']) ? 'checked' : '') ?> onclick="toggleAggregate(event)">
                 <label class="form-check-label small fw-bold" style="color: rgba(255,255,255,0.7);" for="aggregateSwitch">
-                    <i class="fas fa-layer-group text-info me-1"></i> Aggregate
+                    <i class="fas fa-layer-group text-info me-1"></i> Aggregat
                 </label>
+                <div class="small text-muted" style="max-width: 260px;">
+                    Prioritaskan lagu berdasarkan jumlah request dan total saweran.
+                </div>
             </div>
         </div>
     </div>
@@ -229,7 +300,7 @@
             <div class="card stat-card">
                 <div class="card-body py-3 px-4">
                     <p class="text-muted mb-1 small"><i class="fas fa-money-bill-wave text-success me-1"></i> Pendapatan Hari Ini</p>
-                    <h4 class="fw-bold text-success mb-0" id="statDailyIncome">Rp <?= number_format($daily_income, 0, ',', '.') ?></h4>
+                    <h4 class="fw-bold text-success mb-0" id="statDailyIncome">Rp <?= number_format($daily_income, 2, ',', '.') ?></h4>
                 </div>
             </div>
         </div>
@@ -237,7 +308,186 @@
             <div class="card stat-card">
                 <div class="card-body py-3 px-4">
                     <p class="text-muted mb-1 small"><i class="fas fa-wallet text-info me-1"></i> Saldo Anda</p>
-                    <h4 class="fw-bold text-info mb-0" id="statBalance">Rp <?= number_format($balance['available_balance'] ?? 0, 0, ',', '.') ?></h4>
+                    <h4 class="fw-bold text-info mb-0" id="statBalance">Rp <?= number_format($balance['available_balance'] ?? 0, 2, ',', '.') ?></h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== -->
+    <!-- FINANCE CENTER       -->
+    <!-- ==================== -->
+    <div class="finance-shell p-4 mt-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+            <div>
+                <div class="text-uppercase text-muted small fw-bold" style="letter-spacing: 1px;">Finance Center</div>
+                <h5 class="fw-bold mb-1">Riwayat pendapatan, request lagu, dan withdrawal</h5>
+                <p class="text-muted mb-0 small">Pantau pendapatan cafe, request lagu yang menghasilkan saldo, dan ajukan penarikan saldo dari satu tempat.</p>
+            </div>
+            <span class="badge bg-light text-dark border px-3 py-2">
+                <i class="fas fa-shield-alt text-success me-1"></i> Transaksi terproteksi
+            </span>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-4 col-lg-2-4">
+                <div class="finance-mini h-100">
+                    <div class="label">Saldo tersedia</div>
+                    <div class="value" id="financeBalance">Rp <?= number_format($finance_summary['available_balance'] ?? $balance['available_balance'] ?? 0, 2, ',', '.') ?></div>
+                    <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px">Bisa ditarik</div>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-2-4">
+                <div class="finance-mini h-100" style="background:linear-gradient(135deg,#fff7ed 0%,#ffffff 100%);border-color:#fed7aa">
+                    <div class="label" style="color:#d97706">Saldo ditahan</div>
+                    <div class="value" style="color:#d97706" id="financeHeldBalance">Rp <?= number_format($finance_summary['held_balance'] ?? $balance['held_balance'] ?? 0, 2, ',', '.') ?></div>
+                    <div style="font-size:0.72rem;color:#d97706;margin-top:4px">Pending withdrawal</div>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-2-4">
+                <div class="finance-mini h-100" style="background:linear-gradient(135deg,#f0fdf4 0%,#ffffff 100%);border-color:#bbf7d0">
+                    <div class="label" style="color:#15803d">Total pendapatan</div>
+                    <div class="value" style="color:#15803d" id="financeTotalIncome">Rp <?= number_format($finance_summary['total_income'] ?? 0, 2, ',', '.') ?></div>
+                    <div style="font-size:0.72rem;color:#15803d;margin-top:4px">Sejak awal</div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-2-4">
+                <div class="finance-mini h-100">
+                    <div class="label">Pendapatan hari ini</div>
+                    <div class="value" id="financeTodayIncome">Rp <?= number_format($daily_income ?? 0, 2, ',', '.') ?></div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-2-4">
+                <div class="finance-mini h-100">
+                    <div class="label">Request hari ini</div>
+                    <div class="value" id="financeTodayRequests"><?= esc($today_requests ?? 0) ?></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-lg-4">
+                <div class="finance-card h-100 p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="fw-bold mb-1">Ajukan Withdrawal</h6>
+                            <small class="text-muted">Masuk ke approval superadmin dulu sebelum dibayar.</small>
+                        </div>
+                        <span class="finance-badge pending">Pending review</span>
+                    </div>
+                    <form id="withdrawalRequestForm">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Nominal</label>
+                            <input type="number" class="form-control" name="amount" min="10000" step="1000" placeholder="10000" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Tujuan penarikan</label>
+                            <select class="form-select" name="destination_type" id="withdrawalDestinationType" onchange="toggleWithdrawalDestination()" required>
+                                <option value="bank_transfer">Transfer Bank</option>
+                                <option value="e_wallet">E-Wallet</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted" id="withdrawalProviderLabel">Nama Bank</label>
+                            <input type="text" class="form-control" name="bank_name" id="withdrawalProviderInput" placeholder="BCA / BRI / Mandiri" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted" id="withdrawalAccountLabel">Nomor Rekening</label>
+                            <input type="text" class="form-control" name="account_number" placeholder="1234567890" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Nama Pemilik</label>
+                            <input type="text" class="form-control" name="account_holder" placeholder="Nama sesuai rekening" required>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">Status: menunggu konfirmasi superadmin</small>
+                            <button type="submit" class="btn btn-danger btn-sm" id="withdrawalSubmitBtn">
+                                <i class="fas fa-paper-plane me-1"></i> Ajukan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="finance-card p-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="fw-bold mb-1">History Pendapatan</h6>
+                            <small class="text-muted">Transaksi pembayaran yang masuk ke saldo cafe.</small>
+                        </div>
+                        <span class="finance-badge success">Midtrans</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="finance-table table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Tanggal</th>
+                                    <th>Request</th>
+                                    <th>Lagu</th>
+                                    <th>Metode</th>
+                                    <th>Nominal</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payments-tbody">
+                                <tr><td colspan="6" class="text-center text-muted py-4">Memuat data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="finance-card p-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="fw-bold mb-1">History Lagu / Request</h6>
+                            <small class="text-muted">Riwayat request yang masuk ke cafe beserta status antrean.</small>
+                        </div>
+                        <span class="finance-badge waiting">Queue log</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="finance-table table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Tanggal</th>
+                                    <th>Peminta</th>
+                                    <th>Lagu</th>
+                                    <th>Antrean</th>
+                                    <th>Nominal</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="requests-tbody">
+                                <tr><td colspan="6" class="text-center text-muted py-4">Memuat data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="finance-card p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="fw-bold mb-1">History Withdrawal</h6>
+                            <small class="text-muted">Status pengajuan penarikan saldo dan detail tujuan.</small>
+                        </div>
+                        <span class="finance-badge approved">Riwayat</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="finance-table table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Tanggal</th>
+                                    <th>Jumlah</th>
+                                    <th>Tujuan</th>
+                                    <th>Bank / Provider</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="withdrawals-tbody">
+                                <tr><td colspan="5" class="text-center text-muted py-4">Memuat data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -246,6 +496,8 @@
 
 <script>
 const cafeId = <?= esc($cafe['id']) ?>;
+const csrfToken = '<?= csrf_hash() ?>';
+const csrfName  = '<?= csrf_token() ?>';
 // Ensure checkbox reflects server value (fix browser preserving form state issue)
 document.addEventListener('DOMContentLoaded', function() {
     const cb = document.getElementById('aggregateSwitch');
@@ -258,6 +510,15 @@ let autoPlayEnabled = true;
 let pollingInterval = null;
 let hasPlayedOnce = false;
 let isPlayingNext = false;
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadFinanceData();
+    const form = document.getElementById('withdrawalRequestForm');
+    if (form) {
+        form.addEventListener('submit', submitWithdrawalRequest);
+    }
+    toggleWithdrawalDestination();
+});
 
 // Aggregate toggle handler (admin can enable/disable per-cafe)
 async function toggleAggregateSwitch(checked) {
@@ -404,7 +665,228 @@ function formatDuration(s) {
     return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
 }
 function formatCurrency(a) {
-    return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0}).format(a);
+    if (a === null || typeof a === 'undefined' || a === '') return '-';
+    const num = Number(a) || 0;
+    return 'Rp ' + num.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function escapeHtml(value) {
+    if (value === null || typeof value === 'undefined') return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatDateTime(value) {
+    if (!value) return '-';
+    const date = new Date(String(value).replace(' ', 'T'));
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
+function financeStatusClass(status) {
+    const s = String(status || '').toLowerCase();
+    switch (s) {
+        case 'success':
+        case 'approved':
+        case 'paid':
+        case 'done':
+        case 'waiting':
+        case 'processing':
+        case 'completed':
+        case 'failed':
+        case 'rejected':
+        case 'cancelled':
+            return s;
+        case 'pending':
+        default:
+            return 'pending';
+    }
+}
+
+function wdStatusLabel(status) {
+    const labels = {
+        pending: 'Pending',
+        approved: 'Disetujui',
+        processing: 'Diproses',
+        completed: 'Selesai',
+        failed: 'Gagal',
+        rejected: 'Ditolak',
+        cancelled: 'Dibatalkan',
+        paid: 'Selesai (Paid)'
+    };
+    return labels[String(status || '').toLowerCase()] || (status ? String(status).toUpperCase() : '-');
+}
+
+function toggleWithdrawalDestination() {
+    const type = document.getElementById('withdrawalDestinationType');
+    const providerLabel = document.getElementById('withdrawalProviderLabel');
+    const providerInput = document.getElementById('withdrawalProviderInput');
+    const accountLabel = document.getElementById('withdrawalAccountLabel');
+    if (!type || !providerLabel || !providerInput || !accountLabel) return;
+
+    if (type.value === 'e_wallet') {
+        providerLabel.textContent = 'Nama Provider E-Wallet';
+        providerInput.placeholder = 'DANA / OVO / GoPay';
+        accountLabel.textContent = 'Nomor E-Wallet';
+    } else {
+        providerLabel.textContent = 'Nama Bank';
+        providerInput.placeholder = 'BCA / BRI / Mandiri';
+        accountLabel.textContent = 'Nomor Rekening';
+    }
+}
+
+async function loadFinanceData() {
+    try {
+        const [paymentsRes, requestsRes, withdrawalsRes, summaryRes] = await Promise.all([
+            fetch('/admin/payments', { headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
+            fetch('/admin/requests', { headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
+            fetch('/admin/withdrawals', { headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
+            fetch('/admin/finance/summary', { headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
+        ]);
+
+        const [paymentsJson, requestsJson, withdrawalsJson, summaryJson] = await Promise.all([
+            paymentsRes.json().catch(() => ({ data: [] })),
+            requestsRes.json().catch(() => ({ data: [] })),
+            withdrawalsRes.json().catch(() => ({ data: [] })),
+            summaryRes.json().catch(() => ({ success: false })),
+        ]);
+
+        if (summaryJson && summaryJson.success && summaryJson.data) {
+            const sum = summaryJson.data;
+            const elBal = document.getElementById('financeBalance');
+            const elHeld = document.getElementById('financeHeldBalance');
+            const elTot = document.getElementById('financeTotalIncome');
+            if (elBal && typeof sum.available_balance !== 'undefined') elBal.textContent = formatCurrency(sum.available_balance);
+            if (elHeld && typeof sum.held_balance !== 'undefined') elHeld.textContent = formatCurrency(sum.held_balance);
+            if (elTot && typeof sum.total_income !== 'undefined') elTot.textContent = formatCurrency(sum.total_income);
+        }
+
+        renderPaymentHistory(paymentsJson.data || []);
+        renderRequestHistory(requestsJson.data || []);
+        renderWithdrawalHistory(withdrawalsJson.data || []);
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function renderPaymentHistory(rows) {
+    const tbody = document.getElementById('payments-tbody');
+    if (!tbody) return;
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Belum ada pendapatan</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = rows.map((row) => `
+        <tr>
+            <td>${formatDateTime(row.created_at)}</td>
+            <td>${escapeHtml(row.request_id || '-')}</td>
+            <td>${escapeHtml(row.title || '-')}<br><small class="text-muted">${escapeHtml(row.artist || '')}</small></td>
+            <td>${escapeHtml(row.payment_method || '-')}</td>
+            <td><strong>${formatCurrency(row.amount || 0)}</strong></td>
+            <td><span class="finance-badge ${financeStatusClass(row.payment_status)}">${escapeHtml(row.payment_status || '-')}</span></td>
+        </tr>
+    `).join('');
+}
+
+function renderRequestHistory(rows) {
+    const tbody = document.getElementById('requests-tbody');
+    if (!tbody) return;
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Belum ada request</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = rows.map((row) => `
+        <tr>
+            <td>${formatDateTime(row.requested_at)}</td>
+            <td>${escapeHtml(row.guest_name || 'Anonim')}</td>
+            <td>${escapeHtml(row.title || '-')}<br><small class="text-muted">${escapeHtml(row.artist || '')}</small></td>
+            <td>${escapeHtml(row.queue_type || '-')}</td>
+            <td>${row.nominal ? formatCurrency(row.nominal) : '-'}</td>
+            <td><span class="finance-badge ${financeStatusClass(row.status)}">${escapeHtml(row.status || '-')}</span></td>
+        </tr>
+    `).join('');
+}
+
+function renderWithdrawalHistory(rows) {
+    const tbody = document.getElementById('withdrawals-tbody');
+    if (!tbody) return;
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Belum ada withdrawal</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = rows.map((row) => {
+        const destType = row.destination_type === 'e_wallet' ? 'E-Wallet' : 'Transfer Bank';
+        const accountNum = row.account_number_masked || row.account_number || '';
+        const accInfo = accountNum ? `<br><small class="text-muted">${escapeHtml(accountNum)}${row.account_holder ? ' (' + escapeHtml(row.account_holder) + ')' : ''}</small>` : '';
+
+        let extraMeta = '';
+        if (row.status === 'completed' && row.transfer_reference) {
+            extraMeta = `<div class="text-muted mt-1" style="font-size:0.72rem"><i class="fas fa-check-circle text-success me-1"></i>Ref: ${escapeHtml(row.transfer_reference)}</div>`;
+        } else if (row.status === 'processing') {
+            extraMeta = `<div class="text-muted mt-1" style="font-size:0.72rem"><i class="fas fa-spinner fa-spin text-primary me-1"></i>Sedang diproses admin</div>`;
+        } else if ((row.status === 'failed' || row.status === 'rejected') && (row.failure_reason || row.notes)) {
+            extraMeta = `<div class="text-danger mt-1" style="font-size:0.72rem"><i class="fas fa-exclamation-circle me-1"></i>${escapeHtml(row.failure_reason || row.notes)}</div>`;
+        }
+
+        return `
+        <tr>
+            <td>${formatDateTime(row.created_at)}</td>
+            <td><strong>${formatCurrency(row.amount || 0)}</strong></td>
+            <td>${destType}</td>
+            <td>${escapeHtml(row.bank_name || '-')}${accInfo}</td>
+            <td>
+                <span class="finance-badge ${financeStatusClass(row.status)}">${escapeHtml(wdStatusLabel(row.status))}</span>
+                ${extraMeta}
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+async function submitWithdrawalRequest(event) {
+    event.preventDefault();
+    const form = event.target;
+    const btn = document.getElementById('withdrawalSubmitBtn');
+    const formData = new FormData(form);
+    formData.append(csrfName, csrfToken);
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Mengajukan...';
+
+    try {
+        const res = await fetch('/admin/withdrawals/request', {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData
+        });
+        const json = await res.json().catch(() => ({ success: false, message: 'Respon tidak valid' }));
+        if (res.ok && json.success) {
+            showAlert(json.message || 'Withdrawal berhasil diajukan', 'success');
+            form.reset();
+            toggleWithdrawalDestination();
+            await loadFinanceData();
+        } else {
+            const message = json.message || (json.errors ? Object.values(json.errors).join(', ') : 'Gagal mengajukan withdrawal');
+            showAlert(message, 'danger');
+        }
+    } catch (e) {
+        showAlert('Error: ' + e.message, 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Ajukan';
+    }
 }
 
 // =====================

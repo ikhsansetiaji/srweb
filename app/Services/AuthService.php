@@ -45,6 +45,22 @@ class AuthService
         // Register
         $result = $this->userModel->register($data);
         if ($result) {
+            try {
+                $notificationEmailService = service('notificationEmail');
+                if (($data['role'] ?? 'user') === 'admin') {
+                    $notificationEmailService->onAdminRegistered((int) $result['id']);
+                } else {
+                    $notificationEmailService->sendRegistrationEmail([
+                        'id'    => $result['id'],
+                        'name'  => $data['name'],
+                        'email' => $data['email'],
+                        'role'  => $data['role'] ?? 'user',
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                log_message('error', 'AuthService registration email error (non-critical): ' . $e->getMessage());
+            }
+
             return ['success' => true, 'message' => 'Registrasi berhasil', 'user_id' => $result['id']];
         }
 

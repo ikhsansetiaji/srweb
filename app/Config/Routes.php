@@ -28,6 +28,7 @@ $routes->group('user', ['filter' => 'auth'], static function ($routes) {
     $routes->get('history', 'UserController::history');
     $routes->get('profile', 'UserController::profile');
     $routes->put('profile', 'UserController::updateProfile');
+    $routes->post('email-test', 'UserController::sendTestEmail');
 });
 
 // ==========================================
@@ -98,7 +99,11 @@ $routes->group('admin', static function ($routes) {
     $routes->post('play-next', 'AdminController::playNextSong');
     $routes->post('mark-done', 'AdminController::markSongDone');
     $routes->get('withdrawals', 'AdminController::getWithdrawalHistory');
+    $routes->post('withdrawals/request', 'AdminController::createWithdrawalRequest');
     $routes->get('payments', 'AdminController::getPayments');
+    $routes->get('requests', 'AdminController::getRequestHistory');
+    $routes->get('dashboard-stats', 'AdminController::getDashboardStats');
+    $routes->get('finance/summary', 'AdminController::getFinanceSummary');
 });
 
 // ==========================================
@@ -110,9 +115,14 @@ $routes->group('superadmin', static function ($routes) {
     $routes->post('cafe-approve', 'SuperadminController::approveCafe');
     $routes->post('cafe-reject', 'SuperadminController::rejectCafe');
     $routes->get('withdrawals-pending', 'SuperadminController::getPendingWithdrawals');
+    $routes->get('withdrawals', 'SuperadminController::getWithdrawals');
+    $routes->get('withdrawals/(:num)', 'SuperadminController::getWithdrawalDetail/$1');
     $routes->post('withdrawal-approve', 'SuperadminController::approveWithdrawal');
     $routes->post('withdrawal-reject', 'SuperadminController::rejectWithdrawal');
-    $routes->post('withdrawal-paid', 'SuperadminController::markWithdrawalPaid');
+    $routes->post('withdrawal-process', 'SuperadminController::markWithdrawalProcessing');
+    $routes->post('withdrawal-complete', 'SuperadminController::completeWithdrawal');
+    $routes->post('withdrawal-fail', 'SuperadminController::failWithdrawal');
+    $routes->post('withdrawal-paid', 'SuperadminController::markWithdrawalPaid'); // deprecated, redirects to complete
     $routes->get('transactions', 'SuperadminController::getAllTransactions');
     $routes->get('cafes', 'SuperadminController::getAllCafes');
     $routes->get('available-admins', 'SuperadminController::getAvailableAdmins');
@@ -121,8 +131,6 @@ $routes->group('superadmin', static function ($routes) {
     $routes->post('admin-approve', 'SuperadminController::approveAdmin');
     $routes->post('admin-reject', 'SuperadminController::rejectAdmin');
     $routes->post('cafe-toggle-active', 'SuperadminController::toggleCafeActive');
-
-    
 });
 
 // ==========================================
