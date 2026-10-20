@@ -305,7 +305,8 @@ class AdminController extends BaseController
         }
 
         $page   = max(1, (int)($this->request->getGet('page') ?? 1));
-        $limit  = 20;
+        $limit  = (int)($this->request->getGet('limit') ?? 10);
+        if ($limit <= 0 || $limit > 100) $limit = 10;
         $offset = ($page - 1) * $limit;
 
         // Filter opsional
@@ -341,7 +342,8 @@ class AdminController extends BaseController
         }
 
         $page   = max(1, (int)($this->request->getGet('page') ?? 1));
-        $limit  = 20;
+        $limit  = (int)($this->request->getGet('limit') ?? 10);
+        if ($limit <= 0 || $limit > 100) $limit = 10;
         $offset = ($page - 1) * $limit;
 
         $status   = $this->request->getGet('status') ?? '';
@@ -377,16 +379,20 @@ class AdminController extends BaseController
         }
 
         $page   = max(1, (int)($this->request->getGet('page') ?? 1));
-        $limit  = 20;
+        $limit  = (int)($this->request->getGet('limit') ?? 10);
+        if ($limit <= 0 || $limit > 100) $limit = 10;
         $offset = ($page - 1) * $limit;
 
         $withdrawals = $this->withdrawalService->getCafeWithdrawalHistory($cafe['id'], $limit, $offset);
+        $total       = $this->withdrawalService->countCafeWithdrawalHistory($cafe['id']);
 
         return $this->response->setJSON([
-            'success' => true,
-            'data'    => array_map(fn($w) => $this->maskAccountNumber($w), $withdrawals),
-            'page'    => $page,
-            'limit'   => $limit,
+            'success'     => true,
+            'data'        => array_map(fn($w) => $this->maskAccountNumber($w), $withdrawals),
+            'page'        => $page,
+            'limit'       => $limit,
+            'total'       => $total,
+            'total_pages' => (int)ceil($total / $limit),
         ]);
     }
 

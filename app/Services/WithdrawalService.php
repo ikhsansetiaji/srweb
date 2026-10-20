@@ -765,6 +765,14 @@ class WithdrawalService
     }
 
     /**
+     * Hitung total riwayat withdrawal untuk cafe (untuk pagination).
+     */
+    public function countCafeWithdrawalHistory(int $cafeId): int
+    {
+        return $this->withdrawalModel->where('cafe_id', $cafeId)->countAllResults();
+    }
+
+    /**
      * Get withdrawal detail lengkap (untuk superadmin).
      *
      * @param int $withdrawalId
