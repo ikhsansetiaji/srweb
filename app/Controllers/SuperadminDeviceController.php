@@ -83,8 +83,17 @@ class SuperadminDeviceController extends BaseController
             ]);
         }
 
-        $ip  = $this->request->getIPAddress();
-        $otp = $this->otpModel->generateOtp($userId, $ip);
+        // Generate OTP di database
+        $ip = $this->request->getIPAddress();
+        try {
+            $otp = $this->otpModel->generateOtp($userId, $ip);
+        } catch (\Throwable $e) {
+            log_message('error', 'SuperadminDeviceController::generateOtp error: ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Gagal memproses OTP di database (pastikan tabel superadmin_otp_codes sudah dibuat di database VPS): ' . $e->getMessage(),
+            ]);
+        }
 
         // Set rate limit cache (60 detik)
         cache()->save($cacheKey, 1, 60);
@@ -239,6 +248,8 @@ class SuperadminDeviceController extends BaseController
      */
     private function sendOtpEmail(array $user, string $otp): void
     {
+        $lastError = null;
+
         // 1. Coba via NotificationEmailService (Brevo API v3 terpusat)
         try {
             $emailService = service('notificationEmail');
@@ -250,26 +261,43 @@ class SuperadminDeviceController extends BaseController
                 );
 
                 if (!($result['success'] ?? false)) {
-                    log_message('error', 'SuperadminDeviceController Brevo error: ' . ($result['message'] ?? 'Unknown'));
-                    throw new \RuntimeException($result['message'] ?? 'Gagal mengirim email OTP via Brevo');
+                    $lastError = $result['message'] ?? 'Gagal mengirim email OTP via Brevo';
+                    log_message('error', 'SuperadminDeviceController Brevo error: ' . $lastError);
+                    // Jika Brevo menolak karena IP belum di-whitelist atau error auth, lempar langsung agar user tahu
+                    if (str_contains($lastError, 'unrecognised IP address') || str_contains($lastError, 'authorised_ips') || ($result['http_code'] ?? 0) === 401) {
+                        throw new \RuntimeException($lastError);
+                    }
+                } else {
+                    return;
                 }
+            } else {
+                $lastError = 'Layanan Brevo belum terkonfigurasi (periksa BREVO_API_KEY di file .env server)';
+            }
+        } catch (\Throwable $e) {
+            log_message('warning', 'SuperadminDeviceController Brevo failed: ' . $e->getMessage());
+            if (str_contains($e->getMessage(), 'unrecognised IP address') || str_contains($e->getMessage(), 'authorised_ips')) {
+                throw $e;
+            }
+            $lastError = $e->getMessage();
+        }
+
+        // 2. Fallback: coba mailer default CI4 jika Brevo tidak ada / gagal
+        try {
+            $email = \Config\Services::email();
+            $email->setFrom(env('email.from', 'noreply@songreq.app'), env('email.fromName', 'SongReq'));
+            $email->setTo($user['email']);
+            $email->setSubject('[SongReq] Kode Verifikasi Device Superadmin');
+            $email->setMessage($this->buildOtpEmailBody($user['name'] ?? 'Superadmin', $otp));
+            $email->setMailType('html');
+
+            if ($email->send(false)) {
                 return;
             }
         } catch (\Throwable $e) {
-            log_message('warning', 'SuperadminDeviceController Brevo failed, fallback to CI email: ' . $e->getMessage());
+            log_message('error', 'SuperadminDeviceController fallback email error: ' . $e->getMessage());
         }
 
-        // 2. Fallback: gunakan CI4 standard mailer jika Brevo tidak ada / gagal
-        $email = \Config\Services::email();
-        $email->setFrom(env('email.from', 'noreply@songreq.app'), env('email.fromName', 'SongReq'));
-        $email->setTo($user['email']);
-        $email->setSubject('[SongReq] Kode Verifikasi Device Superadmin');
-        $email->setMessage($this->buildOtpEmailBody($user['name'] ?? 'Superadmin', $otp));
-        $email->setMailType('html');
-
-        if (!$email->send(false)) {
-            throw new \RuntimeException('Email send failed: ' . $email->printDebugger(['headers']));
-        }
+        throw new \RuntimeException($lastError ?: 'Gagal mengirim email OTP. Pastikan konfigurasi email di .env sudah benar.');
     }
 
     private function buildOtpEmailBody(string $name, string $otp): string

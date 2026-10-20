@@ -407,7 +407,13 @@
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' }
             });
-            const data = await res.json();
+            let data;
+            const text = await res.text();
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                data = { success: false, message: 'Server Error (' + res.status + '): Periksa log server.' };
+            }
 
             if (data.success) {
                 showAlert(data.message, 'success');
@@ -422,7 +428,7 @@
                 btn.innerHTML = '<i class="fas fa-paper-plane"></i> Kirim Kode OTP ke Email';
             }
         } catch (err) {
-            showAlert('Terjadi kesalahan. Coba lagi.', 'error');
+            showAlert('Gagal menghubungi server: ' + err.message, 'error');
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-paper-plane"></i> Kirim Kode OTP ke Email';
         }
@@ -440,14 +446,21 @@
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' }
             });
-            const data = await res.json();
+            let data;
+            const text = await res.text();
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                data = { success: false, message: 'Server Error (' + res.status + ')' };
+            }
+
             showAlert(data.message || (data.success ? 'OTP baru terkirim.' : 'Gagal.'), data.success ? 'success' : 'error');
             if (data.success) {
                 startTimer(600);
                 digits[0].focus();
             }
-        } catch {
-            showAlert('Gagal mengirim ulang OTP.', 'error');
+        } catch (err) {
+            showAlert('Gagal mengirim ulang OTP: ' + err.message, 'error');
         }
     };
 
