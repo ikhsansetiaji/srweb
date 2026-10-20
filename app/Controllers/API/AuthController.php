@@ -21,6 +21,12 @@ class AuthController extends ResourceController
      */
     public function register()
     {
+        // Parse JSON body from mobile app
+        $json = $this->request->getJSON(true);
+        if ($json) {
+            $this->request->setGlobal('request', $json);
+        }
+
         $rules = [
             'name' => 'required|string|max_length[100]',
             'email' => 'required|valid_email|is_unique[users.email]',
@@ -33,9 +39,9 @@ class AuthController extends ResourceController
         }
 
         $data = [
-            'name' => $this->request->getVar('name'),
-            'email' => $this->request->getVar('email'),
-            'password' => $this->request->getVar('password'),
+            'name' => $json['name'] ?? $this->request->getVar('name'),
+            'email' => $json['email'] ?? $this->request->getVar('email'),
+            'password' => $json['password'] ?? $this->request->getVar('password'),
             'role' => 'user',
         ];
 
@@ -57,6 +63,12 @@ class AuthController extends ResourceController
      */
     public function login()
     {
+        // Parse JSON body from mobile app
+        $json = $this->request->getJSON(true);
+        if ($json) {
+            $this->request->setGlobal('request', $json);
+        }
+
         $rules = [
             'email' => 'required|valid_email',
             'password' => 'required|min_length[8]',
@@ -66,8 +78,8 @@ class AuthController extends ResourceController
             return $this->failValidationErrors($this->validator->getErrors());
         }
 
-        $email = $this->request->getVar('email');
-        $password = $this->request->getVar('password');
+        $email = $json['email'] ?? $this->request->getVar('email');
+        $password = $json['password'] ?? $this->request->getVar('password');
 
         $result = $this->authService->login($email, $password);
 

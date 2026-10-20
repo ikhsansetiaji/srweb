@@ -160,5 +160,9 @@ local.properties
 # Storage/temp Spotify tokens jika disimpan ke file
 /writable/spotify_tokens/*
 
-
 Database\Seeds\UserSeeder.php
+
+# Scratch & Temporary Folders
+/scratch/
+/-p/
+.gemini/

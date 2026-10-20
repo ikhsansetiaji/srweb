@@ -3,6 +3,9 @@
 namespace Config;
 
 use CodeIgniter\Config\BaseService;
+use App\Services\NotificationEmailService;
+use App\Services\WhatsAppNotificationService;
+use App\Services\FonnteService;
 
 /**
  * Services Configuration file.
@@ -20,13 +23,48 @@ use CodeIgniter\Config\BaseService;
 class Services extends BaseService
 {
 
-      public static function example($getShared = true)
-     {
+    public static function notificationEmail($getShared = true)
+    {
+        if ($getShared) {
+            return static::getSharedInstance('notificationEmail');
+        }
+
+        return new NotificationEmailService();
+    }
+
+    /**
+     * WhatsApp Notification Service via Fonnte API.
+     * Gunakan service('whatsappNotification') untuk mendapatkan instance shared.
+     */
+    public static function whatsappNotification($getShared = true)
+    {
+        if ($getShared) {
+            return static::getSharedInstance('whatsappNotification');
+        }
+
+        return new WhatsAppNotificationService();
+    }
+
+    /**
+     * Fonnte HTTP client service.
+     * Jarang digunakan langsung — lebih baik pakai whatsappNotification.
+     */
+    public static function fonnte($getShared = true)
+    {
+        if ($getShared) {
+            return static::getSharedInstance('fonnte');
+        }
+
+        return new FonnteService();
+    }
+
+    public static function example($getShared = true)
+    {
         if ($getShared) {
             return static::getSharedInstance('example');
-       }
+        }
 
         return new \CodeIgniter\Example();
-     }
+    }
 
 }

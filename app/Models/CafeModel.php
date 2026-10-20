@@ -15,7 +15,7 @@ class CafeModel extends Model
         'admin_id', 'nama_kafe', 'slug', 'alamat', 'deskripsi', 'logo',
         'phone_number', 'status', 'is_active', 'verified_by', 'verified_at',
         'rejection_reason', 'payment_receiver', 'payment_method', 'payment_qris',
-        'payment_gate_token', 'updated_at'
+        'payment_gate_token', 'aggregate_enabled', 'updated_at'
     ];
     protected $useTimestamps = false;
 

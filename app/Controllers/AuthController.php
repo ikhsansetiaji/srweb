@@ -110,6 +110,10 @@ class AuthController extends BaseController
             'password'         => 'required|min_length[8]',
             'password_confirm' => 'required|matches[password]',
             'role'             => 'required|in_list[user,admin]',
+            'phone'            => 'required|string|min_length[9]|max_length[20]',
+            'phone_wa'         => 'permit_empty|string|max_length[20]',
+            'is_wa_same'       => 'permit_empty',
+            'wa_notif_enabled' => 'permit_empty',
         ];
 
         if (!$this->validate($rules)) {
@@ -119,20 +123,45 @@ class AuthController extends BaseController
             ]);
         }
 
-        $name     = $this->request->getPost('name');
-        $email    = $this->request->getPost('email');
-        $password = $this->request->getPost('password');
-        $role     = $this->request->getPost('role');
+        $name           = $this->request->getPost('name');
+        $email          = $this->request->getPost('email');
+        $password       = $this->request->getPost('password');
+        $role           = $this->request->getPost('role');
+        $phone          = $this->request->getPost('phone');
+        $phoneWa        = $this->request->getPost('phone_wa');
+        $isWaSame       = $this->request->getPost('is_wa_same');
+        $waNotifEnabled = $this->request->getPost('wa_notif_enabled');
 
         if (!$name || !$email || !$password || !$role) {
-            $json     = $this->request->getJSON(true);
-            $name     = $json['name']     ?? $name;
-            $email    = $json['email']    ?? $email;
-            $password = $json['password'] ?? $password;
-            $role     = $json['role']     ?? $role;
+            $json           = $this->request->getJSON(true);
+            $name           = $json['name']             ?? $name;
+            $email          = $json['email']            ?? $email;
+            $password       = $json['password']         ?? $password;
+            $role           = $json['role']             ?? $role;
+            $phone          = $json['phone']            ?? $phone;
+            $phoneWa        = $json['phone_wa']         ?? $phoneWa;
+            $isWaSame       = $json['is_wa_same']       ?? $isWaSame;
+            $waNotifEnabled = $json['wa_notif_enabled'] ?? $waNotifEnabled;
         }
 
-        $result = $this->authService->register(compact('name', 'email', 'password', 'role'));
+        // Tentukan nomor WhatsApp berdasarkan konfirmasi pengguna
+        $isSame = filter_var($isWaSame ?? true, FILTER_VALIDATE_BOOLEAN);
+        $finalPhoneWa = ($isSame || empty($phoneWa)) ? $phone : $phoneWa;
+
+        $fonnteService = new \App\Services\FonnteService();
+        $normalizedPhoneWa = $fonnteService->normalizePhone($finalPhoneWa) ?: $finalPhoneWa;
+
+        $registerData = [
+            'name'             => $name,
+            'email'            => $email,
+            'password'         => $password,
+            'role'             => $role,
+            'phone'            => $phone,
+            'phone_wa'         => $normalizedPhoneWa,
+            'wa_notif_enabled' => \App\Services\WhatsAppNotificationService::parseBoolean($waNotifEnabled ?? true),
+        ];
+
+        $result = $this->authService->register($registerData);
 
         if ($result['success']) {
             return $this->response->setJSON([
@@ -158,11 +187,11 @@ class AuthController extends BaseController
     }
 
     /**
-     * Show user dashboard screen (reminds user to request via cafe landing/Android app)
+     * Show user dashboard screen (redirects to UserController)
      */
     public function userDashboard()
     {
-        return view('auth/user_dashboard');
+        return redirect()->to('/user/dashboard');
     }
 
     /**

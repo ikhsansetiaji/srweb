@@ -12,15 +12,32 @@ class UserModel extends Model
     protected $useAutoIncrement = true;
     protected $returnType = 'array';
     protected $useSoftDeletes = false;
-    protected $allowedFields = ['name', 'username', 'email', 'password', 'role', 'is_verified', 'is_active', 'last_login', 'updated_at'];
+    protected $allowedFields = [
+        'name',
+        'username',
+        'email',
+        'password',
+        'role',
+        'phone',
+        'phone_wa',
+        'wa_notif_enabled',
+        'is_verified',
+        'is_active',
+        'last_login',
+        'created_at',
+        'updated_at'
+    ];
     protected $useTimestamps = false;
 
     protected $validationRules = [
-        'name' => 'required|string|max_length[100]',
-        'email' => 'required|valid_email|is_unique[users.email,id,{id}]',
-        'username' => 'permit_empty|string|max_length[50]|is_unique[users.username,id,{id}]',
-        'password' => 'required|string|min_length[8]',
-        'role' => 'required|in_list[user,admin,superadmin]',
+        'name'             => 'required|string|max_length[100]',
+        'email'            => 'required|valid_email|is_unique[users.email,id,{id}]',
+        'username'         => 'permit_empty|string|max_length[50]|is_unique[users.username,id,{id}]',
+        'password'         => 'required|string|min_length[8]',
+        'role'             => 'required|in_list[user,admin,superadmin]',
+        'phone'            => 'permit_empty|string|max_length[20]',
+        'phone_wa'         => 'permit_empty|string|max_length[20]',
+        'wa_notif_enabled' => 'permit_empty',
     ];
 
     protected $validationMessages = [];

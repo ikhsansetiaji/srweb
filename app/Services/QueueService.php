@@ -104,10 +104,22 @@ class QueueService
             ->get()
             ->getResultArray();
 
+        // Pending payments (priority requests waiting for payment)
+        $pendingPayments = $db->table('song_requests')
+            ->select('song_requests.*, songs.title, songs.artist, songs.duration, songs.thumbnail')
+            ->join('songs', 'song_requests.song_id = songs.id', 'left')
+            ->where('song_requests.cafe_id', $cafeId)
+            ->where('song_requests.queue_type', 'priority')
+            ->where('song_requests.status', 'pending_payment')
+            ->orderBy('song_requests.requested_at', 'ASC')
+            ->get()
+            ->getResultArray();
+
         return [
             'priority' => $priorityQueue,
             'fifo' => $fifoQueue,
-            'total' => count($priorityQueue) + count($fifoQueue),
+            'pending_payments' => $pendingPayments,
+            'total' => count($priorityQueue) + count($fifoQueue) + count($pendingPayments),
         ];
     }
 
@@ -169,4 +181,3 @@ class QueueService
         return $this->getNextSong($cafeId);
     }
 }
-

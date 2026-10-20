@@ -91,18 +91,18 @@
             </div>
 
             <div class="partner-card">
-                <h5>Kafe A</h5>
-                <span>Di Suatu Tempat</span>
+                <h5>Big Space Kafe</h5>
+                <span>Jakarta</span>
             </div>
 
             <div class="partner-card">
-                <h5>Kafe B</h5>
-                <span>Di Suatu Tempat</span>
+                <h5>Kafe ABC</h5>
+                <span>Surabaya</span>
             </div>
 
             <div class="partner-card">
-                <h5>Kafe C</h5>
-                <span>Di Suatu Tempat</span>
+                <h5>Kafe xyz</h5>
+                <span>Semarang</span>
             </div>
 
         </div>
@@ -278,7 +278,7 @@
                 </p>
 
                 <div class="cta-buttons">
-                    <a href="#" class="btn-cta-primary">
+                    <a href="/song-request/request" class="btn-cta-primary">
                         Request Lagu Sekarang
                     </a>
                 </div>
@@ -430,4 +430,3 @@
 <?= $this->section('js') ?>
 <!--<script src="--><?php //= base_url('assets/js/landing.js') ?><!--"></script>-->
 <?= $this->endSection() ?>
-

@@ -21,73 +21,24 @@ class CafeController extends BaseController
     }
 
     /**
-     * Show register cafe form
+     * Show register cafe form (Disabled for self-registration)
      */
     public function registerPage()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/auth/login');
+        if (session()->get('user_role') === 'admin') {
+            return redirect()->to('/admin/dashboard');
         }
-
-        // Only admin can register cafe
-        if (session()->get('user_role') !== 'admin') {
-            return $this->response->setStatusCode(403)->setJSON([
-                'success' => false,
-                'message' => 'Unauthorized'
-            ]);
-        }
-
-        return view('cafe/register');
+        return redirect()->to('/');
     }
 
     /**
-     * Handle cafe registration
+     * Handle cafe registration (Disabled for self-registration)
      */
     public function register()
     {
-        if (!session()->has('user_id')) {
-            return redirect()->to('/auth/login');
-        }
-
-        $rules = [
-            'nama_kafe' => 'required|string|max_length[100]',
-            'alamat' => 'required|string',
-            'phone_number' => 'required|string|max_length[20]',
-            'payment_receiver' => 'required|string|max_length[100]',
-            'payment_method' => 'required|in_list[QRIS,bank_transfer,e_wallet]',
-            'payment_qris' => 'permit_empty|string',
-        ];
-
-        if (!$this->validate($rules)) {
-            return $this->response->setStatusCode(422)->setJSON([
-                'success' => false,
-                'errors' => $this->validator->getErrors()
-            ]);
-        }
-
-        $data = [
-            'nama_kafe' => $this->request->getPost('nama_kafe') ?? $this->request->getJSON('nama_kafe'),
-            'alamat' => $this->request->getPost('alamat') ?? $this->request->getJSON('alamat'),
-            'deskripsi' => $this->request->getPost('deskripsi') ?? $this->request->getJSON('deskripsi'),
-            'phone_number' => $this->request->getPost('phone_number') ?? $this->request->getJSON('phone_number'),
-            'payment_receiver' => $this->request->getPost('payment_receiver') ?? $this->request->getJSON('payment_receiver'),
-            'payment_method' => $this->request->getPost('payment_method') ?? $this->request->getJSON('payment_method'),
-            'payment_qris' => $this->request->getPost('payment_qris') ?? $this->request->getJSON('payment_qris'),
-        ];
-
-        $result = $this->authService->registerCafe(session()->get('user_id'), $data);
-
-        if ($result['success']) {
-            return $this->response->setJSON([
-                'success' => true,
-                'message' => $result['message'],
-                'redirect' => '/admin/dashboard'
-            ]);
-        }
-
-        return $this->response->setStatusCode(400)->setJSON([
+        return $this->response->setStatusCode(403)->setJSON([
             'success' => false,
-            'message' => $result['message']
+            'message' => 'Registrasi mandiri dinonaktifkan. Hubungi Superadmin via email kemitraan.'
         ]);
     }
 
@@ -153,10 +104,46 @@ class CafeController extends BaseController
             ]);
         }
 
+        // Quick-toggle: if only aggregate_enabled is provided (AJAX toggle), skip full validation
+        $postedAggregate = $this->request->getPost('aggregate_enabled');
+        $postedNama = $this->request->getPost('nama_kafe');
+        $postedAlamat = $this->request->getPost('alamat');
+
+        if ($postedAggregate !== null && $postedNama === null && $postedAlamat === null) {
+            // Use explicit DB update to ensure boolean literal is written correctly for Postgres
+            $db = \Config\Database::connect();
+            $enabledBool = (bool) filter_var($postedAggregate, FILTER_VALIDATE_BOOLEAN);
+
+            $builder = $db->table('cafes');
+            $builder->where('id', $cafeId);
+            // set boolean literal (unescaped) so Postgres receives TRUE/FALSE
+            $builder->set('aggregate_enabled', $enabledBool ? 'TRUE' : 'FALSE', false);
+            $builder->set('updated_at', date('Y-m-d H:i:s'));
+
+            try {
+                $updated = $builder->update();
+                if ($updated) {
+                    return $this->response->setJSON([
+                        'success' => true,
+                        'message' => 'Pengaturan aggregate berhasil diperbarui',
+                        'aggregate_enabled' => $enabledBool
+                    ]);
+                }
+            } catch (\Exception $e) {
+                log_message('error', 'Cafe aggregate update error: ' . $e->getMessage());
+            }
+
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'message' => 'Gagal menyimpan pengaturan aggregate'
+            ]);
+        }
+
         $rules = [
             'nama_kafe' => 'required|string|max_length[100]',
             'alamat' => 'required|string',
             'phone_number' => 'permit_empty|string|max_length[20]',
+            'aggregate_enabled' => 'permit_empty',
         ];
 
         if (!$this->validate($rules)) {
@@ -170,6 +157,7 @@ class CafeController extends BaseController
             'nama_kafe' => $this->request->getPost('nama_kafe'),
             'alamat' => $this->request->getPost('alamat'),
             'phone_number' => $this->request->getPost('phone_number'),
+            'aggregate_enabled' => (bool) filter_var($this->request->getPost('aggregate_enabled'), FILTER_VALIDATE_BOOLEAN),
             'updated_at' => date('Y-m-d H:i:s'),
         ];
 

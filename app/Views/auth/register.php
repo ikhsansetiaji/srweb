@@ -23,6 +23,43 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="phone" class="form-label fw-600">Nomor Handphone (HP)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="fas fa-phone-alt text-danger"></i></span>
+                                <input type="tel" class="form-control form-control-lg" id="phone" name="phone" placeholder="Contoh: 081234567890" required>
+                            </div>
+                            <small class="text-muted d-block mt-1">Nomor ini digunakan untuk kontak dan notifikasi akun Anda.</small>
+                            <div class="invalid-feedback"></div>
+                        </div>
+
+                        <!-- WhatsApp Confirmation & Number -->
+                        <div class="p-3 mb-3 rounded-3 border bg-light">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="is_wa_same" name="is_wa_same" value="1" checked>
+                                <label class="form-check-label fw-semibold" for="is_wa_same">
+                                    <i class="fab fa-whatsapp text-success me-1"></i> Nomor WhatsApp sama dengan Nomor HP
+                                </label>
+                            </div>
+
+                            <!-- Input Nomor WA Khusus jika berbeda -->
+                            <div id="waSeparateSection" style="display: none;" class="mt-2 pt-2 border-top">
+                                <label for="phone_wa" class="form-label small fw-bold text-dark">Nomor WhatsApp Khusus</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white"><i class="fab fa-whatsapp text-success"></i></span>
+                                    <input type="tel" class="form-control" id="phone_wa" name="phone_wa" placeholder="Contoh: 081234567890">
+                                </div>
+                                <small class="text-muted d-block mt-1">Isi jika nomor WhatsApp Anda berbeda dengan nomor HP di atas.</small>
+                            </div>
+
+                            <div class="form-check mt-2 pt-1">
+                                <input class="form-check-input" type="checkbox" id="wa_notif_enabled" name="wa_notif_enabled" value="1" checked>
+                                <label class="form-check-label small text-muted" for="wa_notif_enabled">
+                                    Kirim notifikasi otomatis (status antrean lagu, pemutaran, pembayaran) via WhatsApp
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="password" class="form-label fw-600">Password</label>
                             <div class="input-group">
                                 <input type="password" class="form-control form-control-lg" id="password" name="password" required>
@@ -70,12 +107,38 @@
 </div>
 
 <script>
+// Toggle WhatsApp number section
+const isWaSameCheckbox = document.getElementById('is_wa_same');
+const waSeparateSection = document.getElementById('waSeparateSection');
+const phoneWaInput = document.getElementById('phone_wa');
+const phoneInput = document.getElementById('phone');
+
+if (isWaSameCheckbox && waSeparateSection) {
+    isWaSameCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            waSeparateSection.style.display = 'none';
+            phoneWaInput.value = '';
+        } else {
+            waSeparateSection.style.display = 'block';
+            phoneWaInput.focus();
+        }
+    });
+}
+
 document.getElementById('registerForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
+    const isSame = isWaSameCheckbox ? isWaSameCheckbox.checked : true;
+    const phoneVal = phoneInput.value.trim();
+    const phoneWaVal = phoneWaInput ? phoneWaInput.value.trim() : '';
+
     const formData = {
-        name: document.getElementById('name').value,
-        email: document.getElementById('email').value,
+        name: document.getElementById('name').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        phone: phoneVal,
+        is_wa_same: isSame,
+        phone_wa: isSame ? phoneVal : phoneWaVal,
+        wa_notif_enabled: document.getElementById('wa_notif_enabled').checked,
         password: document.getElementById('password').value,
         password_confirm: document.getElementById('password_confirm').value,
         role: document.getElementById('role').value
@@ -123,6 +186,18 @@ function togglePassword(id, btn) {
         icon.className = 'fas fa-eye';
     }
 }
+
+// Auto-select role based on URL parameter
+window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roleParam = urlParams.get('role');
+    if (roleParam) {
+        const roleSelect = document.getElementById('role');
+        if (roleSelect) {
+            roleSelect.value = roleParam;
+        }
+    }
+});
 </script>
 
 <?= $this->endSection() ?>
