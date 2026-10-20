@@ -2,22 +2,22 @@
 
 namespace App\Filters;
 
-use App\Libraries\TabSessionManager;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 
+/**
+ * SuperadminFilter - cek login + role superadmin melalui standard session & Bearer token
+ */
 class SuperadminFilter implements FilterInterface
 {
     public function before(RequestInterface $request, $arguments = null)
     {
-        // 1. TabSession (web browser)
-        $tabToken = TabSessionManager::getTokenFromRequest();
-        if ($tabToken && TabSessionManager::isTabLoggedIn($tabToken)) {
-            if (TabSessionManager::getTabRole($tabToken) !== 'superadmin') {
+        // 1. Web session (CodeIgniter session)
+        if (session()->get('logged_in') && session()->has('user_id')) {
+            if (session()->get('user_role') !== 'superadmin') {
                 return $this->unauthorized($request);
             }
-            TabSessionManager::hydrateSession($tabToken);
             return null;
         }
 
@@ -36,6 +36,7 @@ class SuperadminFilter implements FilterInterface
                         'user_name'  => $user['name'],
                         'user_email' => $user['email'],
                         'user_role'  => $user['role'],
+                        'logged_in'  => true,
                     ]);
                     return null;
                 }
@@ -63,5 +64,7 @@ class SuperadminFilter implements FilterInterface
         return redirect()->to('/')->with('error', 'Unauthorized access');
     }
 
-    public function after(RequestInterface $request, ResponseInterface $response, $arguments = null) {}
+    public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
+    {
+    }
 }

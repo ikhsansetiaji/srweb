@@ -2,19 +2,19 @@
 
 namespace App\Filters;
 
-use App\Libraries\TabSessionManager;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 
+/**
+ * AuthFilter - verifikasi login user melalui standard CodeIgniter session & Bearer token
+ */
 class AuthFilter implements FilterInterface
 {
     public function before(RequestInterface $request, $arguments = null)
     {
-        // 1. TabSession (web)
-        $tabToken = TabSessionManager::getTokenFromRequest();
-        if ($tabToken && TabSessionManager::isTabLoggedIn($tabToken)) {
-            TabSessionManager::hydrateSession($tabToken);
+        // 1. Web session (CodeIgniter session)
+        if (session()->get('logged_in') && session()->has('user_id')) {
             return null;
         }
 
@@ -33,6 +33,7 @@ class AuthFilter implements FilterInterface
                         'user_name'  => $user['name'],
                         'user_email' => $user['email'],
                         'user_role'  => $user['role'],
+                        'logged_in'  => true,
                     ]);
                     return null;
                 }
@@ -41,13 +42,15 @@ class AuthFilter implements FilterInterface
 
         if ($request->isAJAX() || str_contains($request->getHeaderLine('Accept'), 'application/json')) {
             return response()->setStatusCode(401)->setJSON([
-                'success' => false,
-                'message' => 'Sesi telah berakhir. Silakan login kembali.',
+                'success'  => false,
+                'message'  => 'Sesi telah berakhir. Silakan login kembali.',
                 'redirect' => '/auth/login',
             ]);
         }
         return redirect()->to('/auth/login');
     }
 
-    public function after(RequestInterface $request, ResponseInterface $response, $arguments = null) {}
+    public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
+    {
+    }
 }
