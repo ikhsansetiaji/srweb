@@ -2,32 +2,30 @@
 
 namespace App\Filters;
 
-use App\Libraries\TabSessionManager;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * SuperadminFilter - cek login + role superadmin per-tab
+ * SuperadminFilter - cek login + role superadmin
  */
 class SuperadminFilter implements FilterInterface
 {
     public function before(RequestInterface $request, $arguments = null)
     {
-        $tabToken = TabSessionManager::getTokenFromRequest();
-
-        if (!$tabToken || !TabSessionManager::isTabLoggedIn($tabToken)) {
-            if ($request->isAJAX()) {
+        if (!session()->get('logged_in') || !session()->has('user_id')) {
+            if ($request->isAJAX() || str_contains($request->getHeaderLine('Accept'), 'application/json')) {
                 return response()->setStatusCode(401)->setJSON([
-                    'success' => false,
-                    'message' => 'Sesi tab ini telah berakhir. Silakan login kembali.'
+                    'success'  => false,
+                    'message'  => 'Sesi Anda telah berakhir. Silakan login kembali.',
+                    'redirect' => '/auth/login',
                 ]);
             }
             return redirect()->to('/auth/login');
         }
 
-        if (TabSessionManager::getTabRole($tabToken) !== 'superadmin') {
-            if ($request->isAJAX()) {
+        if (session()->get('user_role') !== 'superadmin') {
+            if ($request->isAJAX() || str_contains($request->getHeaderLine('Accept'), 'application/json')) {
                 return response()->setStatusCode(403)->setJSON([
                     'success' => false,
                     'message' => 'Unauthorized - Superadmin access required'
@@ -35,8 +33,6 @@ class SuperadminFilter implements FilterInterface
             }
             return redirect()->to('/')->with('error', 'Unauthorized access');
         }
-
-        TabSessionManager::hydrateSession($tabToken);
 
         return null;
     }

@@ -18,9 +18,16 @@
     <!-- Custom CSS -->
     <link href="<?= base_url('assets/css/style.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/landingbaru.css') ?>" rel="stylesheet">
-
-    <script src="<?= base_url('assets/js/tab-session.js') ?>"></script>
-
+    <script>
+        // Bersihkan parameter _tab_token dari address bar jika pengguna membuka link lama / bookmark
+        if (window.location.search && window.location.search.indexOf('_tab_token=') !== -1) {
+            try {
+                var _cleanUrl = new URL(window.location.href);
+                _cleanUrl.searchParams.delete('_tab_token');
+                window.history.replaceState({}, document.title, _cleanUrl.pathname + (_cleanUrl.search ? _cleanUrl.search : '') + _cleanUrl.hash);
+            } catch (e) {}
+        }
+    </script>
     <?= $this->renderSection('css') ?>
 </head>
 <body>

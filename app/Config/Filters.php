@@ -49,13 +49,11 @@ class Filters extends BaseFilters
 
     public array $globals = [
         'before' => [
-            'tabsession', // Hydrate per-tab session data
             // 'honeypot',
             // 'csrf',
             // 'invalidchars',
         ],
         'after' => [
-            'tabsession', // Dehydrate: bersihkan session agar tidak bocor antar tab
             // 'honeypot',
             // 'secureheaders',
         ],

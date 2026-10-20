@@ -42,36 +42,12 @@
 </div>
 
 <script>
-/**
- * TAB TOKEN SYSTEM
- *
- * Setiap tab mendapat token unik yang disimpan di sessionStorage.
- * sessionStorage TIDAK dibagikan antar tab (berbeda dengan localStorage).
- * Token ini dikirim via header X-Tab-Token di setiap request ke server,
- * sehingga server tahu data login mana yang harus dipakai untuk tab ini.
- */
 (function () {
-    // Ambil atau generate tabToken untuk tab ini
-    // sessionStorage otomatis terisolasi per tab oleh browser
-    if (!sessionStorage.getItem('tabToken')) {
-        sessionStorage.setItem('tabToken', generateToken());
-    }
-
-    function generateToken() {
-        const arr = new Uint8Array(32);
-        crypto.getRandomValues(arr);
-        return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    function getTabToken() {
-        return sessionStorage.getItem('tabToken');
-    }
-
     // ===== LOGIN FORM =====
     document.getElementById('loginForm').addEventListener('submit', async function (e) {
         e.preventDefault();
 
-        const btn   = document.getElementById('loginBtn');
+        const btn      = document.getElementById('loginBtn');
         const email    = document.getElementById('email').value;
         const password = document.getElementById('password').value;
 
@@ -87,8 +63,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-Tab-Token': getTabToken()   // <-- kunci utama
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({ email, password })
             });
@@ -96,9 +71,7 @@
             const data = await response.json();
 
             if (data.success) {
-                // Append _tab_token ke redirect URL agar navigasi biasa bisa dikenali server
-                var sep = data.redirect.includes('?') ? '&' : '?';
-                window.location.href = data.redirect + sep + '_tab_token=' + getTabToken();
+                window.location.href = data.redirect;
             } else if (data.errors) {
                 // Validation errors
                 Object.entries(data.errors).forEach(([field, msg]) => {

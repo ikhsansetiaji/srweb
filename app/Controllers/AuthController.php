@@ -2,7 +2,7 @@
 
 namespace App\Controllers;
 
-use App\Libraries\TabSessionManager;
+
 use App\Services\AuthService;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -32,27 +32,9 @@ class AuthController extends BaseController
 
     /**
      * Handle login request
-     * Menerima tabToken dari header X-Tab-Token
      */
     public function login()
     {
-        // Ambil tabToken dari header
-        // Untuk logout, token bisa dari query param (GET link)
-        $tabToken = $this->request->getGet('_tab_token');
-        if ($tabToken && !TabSessionManager::isValidToken($tabToken)) {
-            $tabToken = null;
-        }
-        if (!$tabToken) {
-            $tabToken = TabSessionManager::getTokenFromRequest();
-        }
-
-        if (!$tabToken) {
-            return $this->response->setStatusCode(400)->setJSON([
-                'success' => false,
-                'message' => 'Tab token tidak ditemukan. Refresh halaman dan coba lagi.'
-            ]);
-        }
-
         $rules = [
             'email'    => 'required|valid_email',
             'password' => 'required|min_length[8]',
@@ -84,12 +66,16 @@ class AuthController extends BaseController
         $result = $this->authService->login($email, $password);
 
         if ($result['success']) {
-            // Simpan data user ke slot tab ini di session
-            TabSessionManager::setTabUser($tabToken, [
+            // Regenerate session ID untuk mencegah session fixation attacks
+            session()->regenerate(true);
+
+            // Simpan data user ke standard session
+            session()->set([
                 'user_id'    => $result['user']['id'],
                 'user_name'  => $result['user']['name'],
                 'user_email' => $result['user']['email'],
                 'user_role'  => $result['user']['role'],
+                'logged_in'  => true,
             ]);
 
             return $this->response->setJSON([
@@ -163,28 +149,12 @@ class AuthController extends BaseController
     }
 
     /**
-     * Handle logout - hanya logout tab ini, tab lain tidak terpengaruh
+     * Handle logout
      */
     public function logout()
     {
-        // Untuk logout, token bisa dari query param (GET link)
-        $tabToken = $this->request->getGet('_tab_token');
-        if ($tabToken && !TabSessionManager::isValidToken($tabToken)) {
-            $tabToken = null;
-        }
-        if (!$tabToken) {
-            $tabToken = TabSessionManager::getTokenFromRequest();
-        }
-
-        if ($tabToken) {
-            // Hapus hanya slot tab ini
-            TabSessionManager::clearTab($tabToken);
-        }
-
-        // Jangan destroy() seluruh session karena tab lain masih pakai!
-        // Hanya hapus slot tab ini dari session.
-
-        return redirect()->to('/');
+        session()->destroy();
+        return redirect()->to('/auth/login')->with('info', 'Anda telah berhasil logout.');
     }
 
     /**
