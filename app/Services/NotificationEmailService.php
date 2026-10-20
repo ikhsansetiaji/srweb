@@ -971,6 +971,51 @@ class NotificationEmailService
         return $this->send($recipient, $subject, $html, $text, $name);
     }
 
+    /**
+     * Kirim OTP verifikasi device baru Superadmin via Brevo API.
+     */
+    public function sendSuperadminDeviceOtp(string $recipientEmail, string $name, string $otp): array
+    {
+        $recipient = trim($recipientEmail);
+        if ($recipient === '' || !filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            return ['success' => false, 'message' => 'Email penerima tidak valid'];
+        }
+
+        $name = trim($name) !== '' ? trim($name) : 'Superadmin';
+        $subject = '[SongReq] Kode Verifikasi Perangkat Superadmin';
+        $expiryTime = date('H:i', strtotime('+10 minutes')) . ' WIB';
+
+        $otpHtml = <<<HTML
+<div style="text-align: center; margin: 28px 0;">
+    <div style="display: inline-block; background-color: #FBF9F7; border: 2px dashed #E05A47; border-radius: 12px; padding: 18px 36px;">
+        <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #2C2724; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">{$otp}</span>
+    </div>
+    <p style="margin: 10px 0 0 0; font-size: 12px; color: #8F8780;">
+        Kode berlaku selama 10 menit (hingga pukul {$expiryTime}).
+    </p>
+</div>
+HTML;
+
+        $rows = [
+            ['label' => 'Tujuan', 'value' => 'Verifikasi Perangkat Baru Superadmin'],
+            ['label' => 'Waktu Permintaan', 'value' => $this->formatDate(date('Y-m-d H:i:s'))],
+            ['label' => 'Masa Berlaku', 'value' => '10 Menit'],
+        ];
+
+        $html = $this->renderTemplate([
+            'title'       => 'Verifikasi Perangkat Superadmin',
+            'name'        => $name,
+            'lead'        => 'Terdeteksi upaya login ke panel Superadmin dari perangkat atau browser baru. Masukkan kode One-Time Password (OTP) berikut untuk memverifikasi dan mempercayai perangkat Anda:' . $otpHtml,
+            'badge'       => ['label' => 'Keamanan Akun', 'type' => 'warning'],
+            'rows'        => $rows,
+            'footer_note' => 'Jangan pernah membagikan kode OTP ini kepada siapapun demi keamanan sistem.',
+        ]);
+
+        $text = "Halo {$name},\n\nTerdeteksi upaya login Superadmin dari perangkat baru.\nKode OTP Anda: {$otp}\nBerlaku selama 10 menit (hingga {$expiryTime}).\n\nJangan bagikan kode ini kepada siapapun.";
+
+        return $this->send($recipient, $subject, $html, $text, $name);
+    }
+
     // =========================================================================
     // CORE SENDER & IDEMPOTENCY ENGINE
     // =========================================================================
