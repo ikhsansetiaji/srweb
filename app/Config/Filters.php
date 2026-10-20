@@ -67,10 +67,8 @@ class Filters extends BaseFilters
             'before' => ['auth', 'admin'],
         ],
 
-        // Superadmin routes - require auth + superadmin role
-        'superadmin/*' => [
-            'before' => ['auth', 'superadmin'],
-        ],
+        // Superadmin routes - filter sekarang diaplikasikan via route group di Routes.php
+        // SuperadminFilter cek: login + role superadmin + device trust
 
         // Cafe management routes - require auth
         'cafe/register' => [

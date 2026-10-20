@@ -217,20 +217,142 @@
     .sa-modal textarea:focus { outline: none; border-color: #e53935; box-shadow: 0 0 0 3px rgba(229,57,53,0.1); }
     .sa-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 
-    /* Responsive */
+    /* ===== RESPONSIVE MOBILE ===== */
     @media (max-width: 991px) {
-        .sa-sidebar { display: none; }
-        .sa-main { padding: 20px 16px; }
+        /* Sidebar jadi drawer, tersembunyi by default */
+        .sa-sidebar {
+            position: fixed;
+            top: 0; left: 0;
+            width: 280px;
+            height: 100vh;
+            z-index: 1050;
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding-top: 0;
+        }
+        .sa-sidebar.open {
+            transform: translateX(0);
+            box-shadow: 8px 0 40px rgba(0,0,0,0.4);
+        }
+        .sa-sidebar-close {
+            display: flex !important;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 14px 16px 8px;
+        }
+        .sa-sidebar-close button {
+            background: rgba(255,255,255,0.08);
+            border: none; border-radius: 8px;
+            color: rgba(255,255,255,0.6); width: 32px; height: 32px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 1rem;
+        }
+        /* Overlay backdrop */
+        .sa-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 1040;
+            backdrop-filter: blur(2px);
+        }
+        .sa-overlay.show { display: block; }
+        /* Mobile top bar */
+        .sa-mobile-topbar {
+            display: flex !important;
+        }
+        /* Main padding */
+        .sa-main {
+            padding: 16px 14px;
+            min-height: calc(100vh - 56px - 50px);
+        }
+        /* Table scrollable horizontal */
+        .sa-table-wrap {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 0 -14px;
+            padding: 0 14px;
+        }
+        .sa-table { min-width: 580px; }
+        /* Stat cards - 2 kolom di mobile */
+        .sa-stat-card { padding: 16px; }
+        .sa-stat-value { font-size: 1.35rem !important; }
+        /* Page header stack */
+        .sa-page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        /* Modal full width */
+        .sa-modal {
+            max-width: 95vw;
+            padding: 20px;
+            margin: 12px;
+        }
+        /* Card sections padding */
+        .sa-card-header { padding: 14px 16px; }
+        /* Filter bar wrap */
+        .wd-filter-bar { gap: 4px; }
+        .wd-filter-btn { padding: 4px 10px; font-size: 0.72rem; }
+        /* Toast bottom center di mobile */
+        .sa-toast-wrap {
+            bottom: 12px; right: 12px; left: 12px;
+        }
+        .sa-toast { font-size: 0.78rem; padding: 10px 14px; }
     }
+    @media (max-width: 575px) {
+        .sa-main { padding: 12px 10px; }
+        .sa-page-header h1 { font-size: 1.2rem; }
+        .sa-stat-value { font-size: 1.15rem !important; }
+    }
+    /* Mobile top bar — hidden on desktop */
+    .sa-mobile-topbar {
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        background: #1a1a2e;
+        padding: 10px 16px;
+        position: sticky;
+        top: 56px;
+        z-index: 200;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .sa-mobile-topbar .brand { color: #fff; font-weight: 700; font-size: 0.88rem; display: flex; align-items: center; gap: 8px; }
+    .sa-mobile-topbar .brand i { color: #e53935; }
+    .sa-hamburger {
+        background: rgba(255,255,255,0.08);
+        border: none; border-radius: 8px; padding: 6px 10px;
+        color: rgba(255,255,255,0.75); font-size: 1rem; cursor: pointer;
+        display: flex; align-items: center; gap: 6px;
+        transition: background 0.15s;
+    }
+    .sa-hamburger:hover { background: rgba(255,255,255,0.14); }
+    /* Sidebar close button — hidden on desktop */
+    .sa-sidebar-close { display: none; }
 </style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
 
+<!-- Overlay backdrop for mobile sidebar -->
+<div class="sa-overlay" id="saSidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- Mobile Top Bar -->
+<div class="sa-mobile-topbar">
+    <div class="brand"><i class="fas fa-crown"></i> Superadmin Panel</div>
+    <button class="sa-hamburger" onclick="openSidebar()" aria-label="Buka menu">
+        <i class="fas fa-bars"></i>
+    </button>
+</div>
+
 <div class="sa-wrapper">
 
-    <!-- Sidebar -->
-    <aside class="sa-sidebar">
+    <!-- Sidebar (Desktop sticky + Mobile drawer) -->
+    <aside class="sa-sidebar" id="saSidebar">
+        <!-- Close button (mobile only) -->
+        <div class="sa-sidebar-close">
+            <button onclick="closeSidebar()" aria-label="Tutup menu"><i class="fas fa-times"></i></button>
+        </div>
+
         <div class="sa-sidebar-brand">
             <div class="brand-icon"><i class="fas fa-crown"></i></div>
             <div>
@@ -239,22 +361,27 @@
         </div>
 
         <div class="sa-nav-section">Menu</div>
-        <a href="#" class="sa-nav-item active" onclick="showSection('dashboard', this); return false;">
+        <a href="#" class="sa-nav-item active" onclick="showSection('dashboard', this); closeSidebar(); return false;">
             <i class="fas fa-th-large"></i> Dashboard
         </a>
-        <a href="#" class="sa-nav-item" onclick="showSection('cafes', this); return false;">
+        <a href="#" class="sa-nav-item" onclick="showSection('cafes', this); closeSidebar(); return false;">
             <i class="fas fa-store"></i> Kelola Cafe
         </a>
-        <a href="#" class="sa-nav-item" onclick="showSection('pending-admins', this); return false;">
+        <a href="#" class="sa-nav-item" onclick="showSection('pending-admins', this); closeSidebar(); return false;">
             <i class="fas fa-user-clock"></i> Verifikasi Admin
             <span class="ms-auto badge-count" id="sidebar-admin-count" style="display:none"></span>
         </a>
-        <a href="#" class="sa-nav-item" onclick="showSection('withdrawals', this); return false;">
+        <a href="#" class="sa-nav-item" onclick="showSection('withdrawals', this); closeSidebar(); return false;">
             <i class="fas fa-wallet"></i> Withdrawal
             <span class="ms-auto badge-count" id="sidebar-wd-count" style="display:none"></span>
         </a>
-        <a href="#" class="sa-nav-item" onclick="showSection('transactions', this); return false;">
+        <a href="#" class="sa-nav-item" onclick="showSection('transactions', this); closeSidebar(); return false;">
             <i class="fas fa-receipt"></i> Transaksi
+        </a>
+
+        <div class="sa-nav-section">Keamanan</div>
+        <a href="#" class="sa-nav-item" onclick="revokeDevices(); return false;" title="Keluar dari semua perangkat">
+            <i class="fas fa-shield-alt"></i> Cabut Perangkat
         </a>
 
         <div class="sa-nav-section">Akun</div>
@@ -1579,6 +1706,48 @@ document.getElementById('create-cafe-modal').addEventListener('click', function(
     if (e.target === this) closeCreateCafeModal();
 });
 
+// ===== MOBILE SIDEBAR DRAWER =====
+function openSidebar() {
+    document.getElementById('saSidebar').classList.add('open');
+    document.getElementById('saSidebarOverlay').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeSidebar() {
+    document.getElementById('saSidebar').classList.remove('open');
+    document.getElementById('saSidebarOverlay').classList.remove('show');
+    document.body.style.overflow = '';
+}
+
+// Swipe-to-close sidebar
+let _swipeStartX = 0;
+document.getElementById('saSidebar').addEventListener('touchstart', function(e) {
+    _swipeStartX = e.changedTouches[0].screenX;
+}, { passive: true });
+document.getElementById('saSidebar').addEventListener('touchend', function(e) {
+    if (_swipeStartX - e.changedTouches[0].screenX > 60) closeSidebar();
+}, { passive: true });
+
+// ===== REVOKE ALL DEVICES =====
+async function revokeDevices() {
+    if (!confirm('Cabut semua perangkat terpercaya?\n\nAnda harus verifikasi OTP lagi di setiap perangkat untuk dapat masuk kembali.')) return;
+    closeSidebar();
+    try {
+        const res = await fetch(BASE + 'superadmin/revoke-devices', {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' }
+        });
+        const json = await res.json();
+        if (json.success) {
+            toast('Semua perangkat dicabut. Mengarahkan ke verifikasi...');
+            setTimeout(() => { window.location.href = '/superadmin/verify-device'; }, 1500);
+        } else {
+            toast(json.message || 'Gagal mencabut perangkat', true);
+        }
+    } catch(e) {
+        toast('Error: ' + e.message, true);
+    }
+}
 
 </script>
 <?= $this->endSection() ?>

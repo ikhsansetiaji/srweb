@@ -67,15 +67,29 @@
                         <?php endif; ?>
 
                         <li class="nav-item dropdown ms-lg-2">
-                            <a class="nav-link dropdown-toggle btn-secondary-custom px-3 py-2 rounded-pill d-inline-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-user-circle me-2 text-coral"></i>
-                                <span><?= esc(session()->get('user_name') ?? 'Akun') ?></span>
+                            <a class="nav-link dropdown-toggle btn-secondary-custom px-3 py-2 rounded-pill d-inline-flex align-items-center w-100 justify-content-between justify-content-lg-start" href="javascript:void(0)" id="userProfileDropdown" role="button" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false">
+                                <span class="d-inline-flex align-items-center">
+                                    <i class="fas fa-user-circle me-2 text-coral"></i>
+                                    <span><?= esc(session()->get('user_name') ?? 'Akun') ?></span>
+                                </span>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2">
-                                <?php if (session()->get('user_role') === 'user'): ?>
-                                    <li><a class="dropdown-item py-2" href="/user/profile"><i class="fas fa-id-card me-2 text-muted"></i>Profil Saya</a></li>
-                                    <li><hr class="dropdown-divider my-1"></li>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" aria-labelledby="userProfileDropdown" id="userProfileDropdownMenu">
+                                <li>
+                                    <div class="px-3 py-2 border-bottom mb-1 d-lg-none">
+                                        <div class="fw-bold text-dark small"><?= esc(session()->get('user_name') ?? 'Pengguna') ?></div>
+                                        <div class="text-muted" style="font-size: 0.75rem;"><?= esc(session()->get('user_email') ?? '') ?></div>
+                                        <span class="badge bg-danger bg-opacity-10 text-danger mt-1" style="font-size: 0.68rem; text-transform: uppercase;">
+                                            <?= esc(session()->get('user_role') ?? 'user') ?>
+                                        </span>
+                                    </div>
+                                </li>
+                                <li><a class="dropdown-item py-2" href="/user/profile"><i class="fas fa-id-card me-2 text-coral"></i>Profil Saya</a></li>
+                                <?php if (session()->get('user_role') === 'admin'): ?>
+                                    <li><a class="dropdown-item py-2" href="/admin/dashboard"><i class="fas fa-store me-2 text-muted"></i>Dashboard Kafe</a></li>
+                                <?php elseif (session()->get('user_role') === 'superadmin'): ?>
+                                    <li><a class="dropdown-item py-2" href="/superadmin/dashboard"><i class="fas fa-shield-alt me-2 text-muted"></i>Dashboard Superadmin</a></li>
                                 <?php endif; ?>
+                                <li><hr class="dropdown-divider my-1"></li>
                                 <li><a class="dropdown-item py-2 text-danger" href="/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>Keluar</a></li>
                             </ul>
                         </li>
@@ -217,6 +231,39 @@
             </div>
         </div>
     </div>
+
+    <!-- Mobile Dropdown Helper -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const userDropdown = document.getElementById('userProfileDropdown');
+        const userMenu = document.getElementById('userProfileDropdownMenu');
+        if (userDropdown && userMenu) {
+            userDropdown.addEventListener('click', function(e) {
+                if (window.innerWidth < 992) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const isShown = userMenu.classList.contains('show');
+                    if (isShown) {
+                        userMenu.classList.remove('show');
+                        this.setAttribute('aria-expanded', 'false');
+                    } else {
+                        userMenu.classList.add('show');
+                        this.setAttribute('aria-expanded', 'true');
+                    }
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('#userProfileDropdown') && !e.target.closest('#userProfileDropdownMenu')) {
+                    if (userMenu.classList.contains('show')) {
+                        userMenu.classList.remove('show');
+                        if (userDropdown) userDropdown.setAttribute('aria-expanded', 'false');
+                    }
+                }
+            });
+        }
+    });
+    </script>
 
     <?= $this->renderSection('js') ?>
 </body>

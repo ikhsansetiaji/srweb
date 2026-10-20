@@ -107,9 +107,18 @@ $routes->group('admin', static function ($routes) {
 });
 
 // ==========================================
-// Superadmin Routes
+// Superadmin Device Verification (no device-trust filter needed)
+// Hanya butuh session login superadmin, bukan device trust
 // ==========================================
-$routes->group('superadmin', static function ($routes) {
+$routes->get('superadmin/verify-device', 'SuperadminDeviceController::verifyDevicePage', ['filter' => 'auth']);
+$routes->post('superadmin/send-otp',      'SuperadminDeviceController::sendOtp',         ['filter' => 'auth']);
+$routes->post('superadmin/verify-otp',    'SuperadminDeviceController::verifyOtp',       ['filter' => 'auth']);
+$routes->post('superadmin/revoke-devices','SuperadminDeviceController::revokeAllDevices',['filter' => 'superadmin']);
+
+// ==========================================
+// Superadmin Routes (dilindungi SuperadminFilter: cek login + role + device trust)
+// ==========================================
+$routes->group('superadmin', ['filter' => 'superadmin'], static function ($routes) {
     $routes->get('dashboard', 'SuperadminController::dashboard');
     $routes->get('cafes-pending', 'SuperadminController::getPendingCafes');
     $routes->post('cafe-approve', 'SuperadminController::approveCafe');
@@ -122,7 +131,7 @@ $routes->group('superadmin', static function ($routes) {
     $routes->post('withdrawal-process', 'SuperadminController::markWithdrawalProcessing');
     $routes->post('withdrawal-complete', 'SuperadminController::completeWithdrawal');
     $routes->post('withdrawal-fail', 'SuperadminController::failWithdrawal');
-    $routes->post('withdrawal-paid', 'SuperadminController::markWithdrawalPaid'); // deprecated, redirects to complete
+    $routes->post('withdrawal-paid', 'SuperadminController::markWithdrawalPaid'); // deprecated
     $routes->get('transactions', 'SuperadminController::getAllTransactions');
     $routes->get('cafes', 'SuperadminController::getAllCafes');
     $routes->get('available-admins', 'SuperadminController::getAvailableAdmins');

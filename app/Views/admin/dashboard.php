@@ -140,6 +140,72 @@
     .finance-badge.completed { background: #f0fdf4; color: #15803d; }
     .finance-badge.paid { background: #f0fdf4; color: #16a34a; }
     .finance-badge.cancelled { background: #f3f4f6; color: #6b7280; }
+
+    /* Finance Navigation Tabs */
+    .finance-nav-pills {
+        background: #f1f5f9;
+        padding: 5px;
+        border-radius: 12px;
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        border: 1px solid #e2e8f0;
+    }
+    .finance-nav-pills .nav-link {
+        color: #64748b;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 8px;
+        transition: all 0.2s;
+        border: none;
+        background: transparent;
+    }
+    .finance-nav-pills .nav-link:hover {
+        color: #0f172a;
+        background: rgba(255, 255, 255, 0.7);
+    }
+    .finance-nav-pills .nav-link.active {
+        color: #ffffff !important;
+        background: #e53935 !important;
+        box-shadow: 0 4px 12px rgba(229, 57, 53, 0.25);
+    }
+    .finance-nav-pills .nav-link.active i {
+        color: #ffffff !important;
+    }
+    .finance-nav-pills .nav-link .badge {
+        font-size: 0.7rem;
+        padding: 2px 7px;
+        border-radius: 999px;
+    }
+
+    /* Pagination Styling */
+    .pagination .page-link {
+        color: #475569;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 5px 12px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        border-radius: 8px !important;
+        transition: all 0.15s;
+    }
+    .pagination .page-link:hover {
+        background: #f8fafc;
+        color: #e53935;
+        border-color: #cbd5e1;
+    }
+    .pagination .page-item.active .page-link {
+        background: #e53935 !important;
+        border-color: #e53935 !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 8px rgba(229, 57, 53, 0.3);
+    }
+    .pagination .page-item.disabled .page-link {
+        background: #f8fafc;
+        color: #cbd5e1;
+        border-color: #f1f5f9;
+    }
 </style>
 <?= $this->endSection() ?>
 
@@ -410,83 +476,124 @@
             </div>
 
             <div class="col-lg-8">
-                <div class="finance-card p-3 mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <h6 class="fw-bold mb-1">History Pendapatan</h6>
-                            <small class="text-muted">Transaksi pembayaran yang masuk ke saldo cafe.</small>
-                        </div>
-                        <span class="finance-badge success">Midtrans</span>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="finance-table table mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <th>Request</th>
-                                    <th>Lagu</th>
-                                    <th>Metode</th>
-                                    <th>Nominal</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="payments-tbody">
-                                <tr><td colspan="6" class="text-center text-muted py-4">Memuat data...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+                <!-- Finance Tabs Navigation -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <ul class="nav nav-pills finance-nav-pills" id="financeTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="pills-payments-tab" data-bs-toggle="pill" data-bs-target="#pills-payments" type="button" role="tab" aria-controls="pills-payments" aria-selected="true">
+                                <i class="fas fa-coins me-1 text-success"></i> Pendapatan
+                                <span class="badge bg-secondary ms-1" id="badgePaymentsCount">0</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-requests-tab" data-bs-toggle="pill" data-bs-target="#pills-requests" type="button" role="tab" aria-controls="pills-requests" aria-selected="false">
+                                <i class="fas fa-music me-1 text-danger"></i> Request Lagu
+                                <span class="badge bg-secondary ms-1" id="badgeRequestsCount">0</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-withdrawals-tab" data-bs-toggle="pill" data-bs-target="#pills-withdrawals" type="button" role="tab" aria-controls="pills-withdrawals" aria-selected="false">
+                                <i class="fas fa-wallet me-1 text-warning"></i> Withdrawal
+                                <span class="badge bg-secondary ms-1" id="badgeWithdrawalsCount">0</span>
+                            </button>
+                        </li>
+                    </ul>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="refreshCurrentTab()" title="Muat ulang data tabel">
+                        <i class="fas fa-sync-alt me-1"></i> Refresh
+                    </button>
                 </div>
 
-                <div class="finance-card p-3 mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <h6 class="fw-bold mb-1">History Lagu / Request</h6>
-                            <small class="text-muted">Riwayat request yang masuk ke cafe beserta status antrean.</small>
+                <div class="tab-content" id="financeTabsContent">
+                    <!-- Tab 1: History Pendapatan -->
+                    <div class="tab-pane fade show active" id="pills-payments" role="tabpanel" aria-labelledby="pills-payments-tab">
+                        <div class="finance-card p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <h6 class="fw-bold mb-1"><i class="fas fa-coins text-success me-1"></i> History Pendapatan</h6>
+                                    <small class="text-muted">Transaksi pembayaran saweran yang masuk ke saldo kafe (10 per halaman).</small>
+                                </div>
+                                <span class="finance-badge success"><i class="fas fa-check-circle me-1"></i>Midtrans</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="finance-table table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Tanggal</th>
+                                            <th>Request ID</th>
+                                            <th>Lagu</th>
+                                            <th>Metode</th>
+                                            <th>Nominal</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="payments-tbody">
+                                        <tr><td colspan="6" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-2"></i>Memuat data...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="payments-pagination"></div>
                         </div>
-                        <span class="finance-badge waiting">Queue log</span>
                     </div>
-                    <div class="table-responsive">
-                        <table class="finance-table table mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <th>Peminta</th>
-                                    <th>Lagu</th>
-                                    <th>Antrean</th>
-                                    <th>Nominal</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="requests-tbody">
-                                <tr><td colspan="6" class="text-center text-muted py-4">Memuat data...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
 
-                <div class="finance-card p-3">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <h6 class="fw-bold mb-1">History Withdrawal</h6>
-                            <small class="text-muted">Status pengajuan penarikan saldo dan detail tujuan.</small>
+                    <!-- Tab 2: History Lagu / Request -->
+                    <div class="tab-pane fade" id="pills-requests" role="tabpanel" aria-labelledby="pills-requests-tab">
+                        <div class="finance-card p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <h6 class="fw-bold mb-1"><i class="fas fa-music text-danger me-1"></i> History Lagu / Request</h6>
+                                    <small class="text-muted">Riwayat request lagu masuk beserta antrean & nominal (10 per halaman).</small>
+                                </div>
+                                <span class="finance-badge waiting"><i class="fas fa-list me-1"></i>Queue log</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="finance-table table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Tanggal</th>
+                                            <th>Peminta</th>
+                                            <th>Lagu</th>
+                                            <th>Antrean</th>
+                                            <th>Nominal</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="requests-tbody">
+                                        <tr><td colspan="6" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-2"></i>Memuat data...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="requests-pagination"></div>
                         </div>
-                        <span class="finance-badge approved">Riwayat</span>
                     </div>
-                    <div class="table-responsive">
-                        <table class="finance-table table mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <th>Jumlah</th>
-                                    <th>Tujuan</th>
-                                    <th>Bank / Provider</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="withdrawals-tbody">
-                                <tr><td colspan="5" class="text-center text-muted py-4">Memuat data...</td></tr>
-                            </tbody>
-                        </table>
+
+                    <!-- Tab 3: History Withdrawal -->
+                    <div class="tab-pane fade" id="pills-withdrawals" role="tabpanel" aria-labelledby="pills-withdrawals-tab">
+                        <div class="finance-card p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <h6 class="fw-bold mb-1"><i class="fas fa-wallet text-warning me-1"></i> History Withdrawal</h6>
+                                    <small class="text-muted">Status pengajuan penarikan dana kafe (10 per halaman).</small>
+                                </div>
+                                <span class="finance-badge approved"><i class="fas fa-university me-1"></i>Pencairan</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="finance-table table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Tanggal</th>
+                                            <th>Jumlah</th>
+                                            <th>Tujuan</th>
+                                            <th>Bank / Provider</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="withdrawals-tbody">
+                                        <tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-2"></i>Memuat data...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="withdrawals-pagination"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -745,22 +852,15 @@ function toggleWithdrawalDestination() {
     }
 }
 
-async function loadFinanceData() {
+// Pagination State
+let currentPaymentsPage = 1;
+let currentRequestsPage = 1;
+let currentWithdrawalsPage = 1;
+
+async function loadFinanceSummary() {
     try {
-        const [paymentsRes, requestsRes, withdrawalsRes, summaryRes] = await Promise.all([
-            fetch('/admin/payments', { headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
-            fetch('/admin/requests', { headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
-            fetch('/admin/withdrawals', { headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
-            fetch('/admin/finance/summary', { headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
-        ]);
-
-        const [paymentsJson, requestsJson, withdrawalsJson, summaryJson] = await Promise.all([
-            paymentsRes.json().catch(() => ({ data: [] })),
-            requestsRes.json().catch(() => ({ data: [] })),
-            withdrawalsRes.json().catch(() => ({ data: [] })),
-            summaryRes.json().catch(() => ({ success: false })),
-        ]);
-
+        const res = await fetch('/admin/finance/summary', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const summaryJson = await res.json().catch(() => ({ success: false }));
         if (summaryJson && summaryJson.success && summaryJson.data) {
             const sum = summaryJson.data;
             const elBal = document.getElementById('financeBalance');
@@ -770,13 +870,172 @@ async function loadFinanceData() {
             if (elHeld && typeof sum.held_balance !== 'undefined') elHeld.textContent = formatCurrency(sum.held_balance);
             if (elTot && typeof sum.total_income !== 'undefined') elTot.textContent = formatCurrency(sum.total_income);
         }
-
-        renderPaymentHistory(paymentsJson.data || []);
-        renderRequestHistory(requestsJson.data || []);
-        renderWithdrawalHistory(withdrawalsJson.data || []);
-    } catch (e) {
-        console.error(e);
+    } catch(e) {
+        console.error('Failed to load finance summary:', e);
     }
+}
+
+async function loadPayments(page = 1) {
+    currentPaymentsPage = page;
+    const tbody = document.getElementById('payments-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-2 text-danger"></i>Memuat halaman ' + page + '...</td></tr>';
+
+    try {
+        const res = await fetch(`/admin/payments?page=${page}&limit=10`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const json = await res.json().catch(() => ({ data: [], total: 0, total_pages: 1 }));
+        const rows = json.data || [];
+        renderPaymentHistory(rows);
+
+        const total = json.total || rows.length;
+        const totalPages = json.total_pages || Math.ceil(total / 10) || 1;
+        const badge = document.getElementById('badgePaymentsCount');
+        if (badge) badge.textContent = total;
+
+        renderPaginationControls('payments-pagination', page, totalPages, total, 'loadPayments');
+    } catch(e) {
+        console.error(e);
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Gagal memuat data pendapatan</td></tr>';
+    }
+}
+
+async function loadRequests(page = 1) {
+    currentRequestsPage = page;
+    const tbody = document.getElementById('requests-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-2 text-danger"></i>Memuat halaman ' + page + '...</td></tr>';
+
+    try {
+        const res = await fetch(`/admin/requests?page=${page}&limit=10`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const json = await res.json().catch(() => ({ data: [], total: 0, total_pages: 1 }));
+        const rows = json.data || [];
+        renderRequestHistory(rows);
+
+        const total = json.total || rows.length;
+        const totalPages = json.total_pages || Math.ceil(total / 10) || 1;
+        const badge = document.getElementById('badgeRequestsCount');
+        if (badge) badge.textContent = total;
+
+        renderPaginationControls('requests-pagination', page, totalPages, total, 'loadRequests');
+    } catch(e) {
+        console.error(e);
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Gagal memuat data request lagu</td></tr>';
+    }
+}
+
+async function loadWithdrawals(page = 1) {
+    currentWithdrawalsPage = page;
+    const tbody = document.getElementById('withdrawals-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-2 text-danger"></i>Memuat halaman ' + page + '...</td></tr>';
+
+    try {
+        const res = await fetch(`/admin/withdrawals?page=${page}&limit=10`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const json = await res.json().catch(() => ({ data: [], total: 0, total_pages: 1 }));
+        const rows = json.data || [];
+        renderWithdrawalHistory(rows);
+
+        const total = json.total || rows.length;
+        const totalPages = json.total_pages || Math.ceil(total / 10) || 1;
+        const badge = document.getElementById('badgeWithdrawalsCount');
+        if (badge) badge.textContent = total;
+
+        renderPaginationControls('withdrawals-pagination', page, totalPages, total, 'loadWithdrawals');
+    } catch(e) {
+        console.error(e);
+        if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">Gagal memuat riwayat withdrawal</td></tr>';
+    }
+}
+
+function loadFinanceData() {
+    loadFinanceSummary();
+    loadPayments(1);
+    loadRequests(1);
+    loadWithdrawals(1);
+}
+
+function refreshCurrentTab() {
+    const activeTab = document.querySelector('#financeTabs .nav-link.active');
+    if (!activeTab) {
+        loadFinanceData();
+        return;
+    }
+    const tabId = activeTab.getAttribute('id');
+    if (tabId === 'pills-payments-tab') {
+        loadPayments(currentPaymentsPage);
+    } else if (tabId === 'pills-requests-tab') {
+        loadRequests(currentRequestsPage);
+    } else if (tabId === 'pills-withdrawals-tab') {
+        loadWithdrawals(currentWithdrawalsPage);
+    }
+    loadFinanceSummary();
+    showAlert('Data berhasil dimuat ulang', 'info');
+}
+
+function renderPaginationControls(containerId, currentPage, totalPages, totalItems, onPageClickFnName) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (totalItems <= 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const startItem = (currentPage - 1) * 10 + 1;
+    const endItem   = Math.min(currentPage * 10, totalItems);
+
+    let html = `
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3 pt-3 border-top">
+        <div class="text-muted small">
+            Menampilkan <strong>${startItem} - ${endItem}</strong> dari <strong>${totalItems}</strong> data
+        </div>
+        <nav aria-label="Pagination">
+            <ul class="pagination pagination-sm mb-0 gap-1 flex-wrap justify-content-center">
+    `;
+
+    // Prev button
+    if (currentPage > 1) {
+        html += `<li class="page-item"><button type="button" class="page-link" onclick="${onPageClickFnName}(${currentPage - 1})"><i class="fas fa-chevron-left me-1"></i>Prev</button></li>`;
+    } else {
+        html += `<li class="page-item disabled"><span class="page-link"><i class="fas fa-chevron-left me-1"></i>Prev</span></li>`;
+    }
+
+    // Numbered pages
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage   = Math.min(totalPages, currentPage + 2);
+
+    if (startPage > 1) {
+        html += `<li class="page-item"><button type="button" class="page-link" onclick="${onPageClickFnName}(1)">1</button></li>`;
+        if (startPage > 2) {
+            html += `<li class="page-item disabled"><span class="page-link border-0">...</span></li>`;
+        }
+    }
+
+    for (let p = startPage; p <= endPage; p++) {
+        if (p === currentPage) {
+            html += `<li class="page-item active"><span class="page-link">${p}</span></li>`;
+        } else {
+            html += `<li class="page-item"><button type="button" class="page-link" onclick="${onPageClickFnName}(${p})">${p}</button></li>`;
+        }
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            html += `<li class="page-item disabled"><span class="page-link border-0">...</span></li>`;
+        }
+        html += `<li class="page-item"><button type="button" class="page-link" onclick="${onPageClickFnName}(${totalPages})">${totalPages}</button></li>`;
+    }
+
+    // Next button
+    if (currentPage < totalPages) {
+        html += `<li class="page-item"><button type="button" class="page-link" onclick="${onPageClickFnName}(${currentPage + 1})">Next<i class="fas fa-chevron-right ms-1"></i></button></li>`;
+    } else {
+        html += `<li class="page-item disabled"><span class="page-link">Next<i class="fas fa-chevron-right ms-1"></i></span></li>`;
+    }
+
+    html += `
+            </ul>
+        </nav>
+    </div>`;
+
+    container.innerHTML = html;
 }
 
 function renderPaymentHistory(rows) {

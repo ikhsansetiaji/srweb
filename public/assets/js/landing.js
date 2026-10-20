@@ -181,7 +181,7 @@ function updateNavbarState(href) {
 // ============================================
 
 function setupCTAButtons() {
-    const ctaButtons = document.querySelectorAll('[href="#"]');
+    const ctaButtons = document.querySelectorAll('a[href="#"]:not([data-bs-toggle])');
 
     ctaButtons.forEach(button => {
         button.addEventListener('click', function(e) {
